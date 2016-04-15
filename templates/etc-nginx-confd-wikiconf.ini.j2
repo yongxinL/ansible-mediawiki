@@ -1,0 +1,76 @@
+# Common deny, drop, or internal locations
+
+# Exclude all access from the cache directory
+location ^~ /cache/ {
+    deny all;
+}
+
+# Prevent access to any files starting with a dot, like .htaccess 
+# or text editor temp files
+location ~ /\. {
+    access_log off;
+    log_not_found off;
+    deny all;
+}
+
+# Prevent access to any files starting with a $ (usually temp files)
+location ~ ~$ {
+    access_log off;
+    log_not_found off;
+    deny all;
+}
+
+# Do not log access to robots.txt, to keep the logs cleaner
+location /robots.txt {
+    access_log off;
+    log_not_found off;
+    deny all;
+}
+
+# Do not log access to the favicon, to keep the logs cleaner
+location /favicon.ico {
+    access_log off;
+    log_not_found off;
+    deny all;
+}
+
+# Keep images and CSS around in browser cache for as long as possible
+# to cut down on server load
+location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+    try_files $uri  /index.php;
+    expires max;
+    log_not_found off;
+}
+
+# Mark all of these directories as "internal", which means that they cannot
+# be explicitly accessed by clients. However, the web server can still use
+# and serve the files inside of them. This keeps people from paking around 
+# in the wiki's internals.
+
+location  ^~ /bin/ { internal; }
+location  ^~ /docs/ { internal; }
+location  ^~ /extensions/SemanticMediaWiki/ { }
+location  ^~ /extensions/ { internal; }
+location  ^~ /includes/ { internal; }
+location  ^~ /maintenance/ { internal; }
+location  ^~ /resources/lib/ { internal; }
+location  ^~ /resources/src/ { internal; }
+location  ^~ /serialized/ { internal; }
+location  ^~ /tests/ { internal; }
+
+# Uncomment after installation
+location  ^~ /mw-config/ { internal; }
+
+# Force potentially-malicious files in the /images directory to be served
+# with a text/plain mime type, to prevent them from being executed by
+# the PHP handler
+location ~* ^/images/.*.(html|htm|shtml|php)$ {
+    types { }
+    default_type text/plain;
+}
+
+# Redirect all requests for unknown URLs out of images and back to the
+# root index.php file
+location ^~ /images/ {
+    try_files $uri /index.php;
+}
