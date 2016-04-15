@@ -1,0 +1,124 @@
+# =============================================================================
+#
+# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
+#
+# - This is part of HomeVault imagebuilder project.
+# - This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# =============================================================================
+
+# Default variables
+# =================
+
+# .. contents:: Sections
+#    :local:
+#
+# ------------------------------------
+#   Packages and installation
+# ------------------------------------
+install_role_name: 'mediawiki'
+
+# .. envvar:: target_host_domain
+#
+# Specify hostname and domain that should be set in the target image.
+target_host_domain: 'yongxin.info'
+
+# .. envvar:: mediawiki_server
+#
+# Specify server name to use for MediaWiki
+mediawiki_server: 'wiki.{{ target_host_domain }}'
+
+# .. envvar:: mediawiki_version
+#
+# specify the MediaWiki version clone from repository
+mediawiki_version: 'REL1_25'
+
+# .. envvar:: mediawiki_db_name
+#
+# specify the MediaWiki databaes user
+mediawiki_db_name: 'yongxin_webdb'
+
+# .. envvar:: mediawiki_db_user
+#
+# specify the MediaWiki databaes user
+mediawiki_db_user: 'webconn'
+
+# .. envvar:: target_root_password
+#
+# Specify root password
+target_root_password: 'secret'
+
+# .. envvar:: target_appdata_root
+#
+# Specify folder that will be use as new location of application data files
+# in case if you want to collect all appdata files in one
+target_appdata_root:
+
+# .. envvar:: target_appdata_root
+#
+# Specify folder that will be use as new location of application data files
+# in case if you want to collect all appdata files in one
+target_mediawiki_root: '{{ target_appdata_root }}/wiki'
+
+# .. envvar:: nginx_base_packages
+#
+# List of base packages to install by Ansible
+mediawiki_base_packages:
+  - { package: 'git', version: '*' }
+
+# .. envvar:: nginx_packages
+#
+# List of additional packages to install by Ansible
+mediawiki_packages: []
+
+# .. envvar:: nginx_configuration
+#
+# List of configuration file will be copy to Linux base filesystems
+mediawiki_configuration:
+  - { name: 'etc-nginx-confd-wikiconf.ini.j2', dest: '/etc/nginx/conf.d/wikiconf.ini' }
+  - { name: 'etc-nginx-confd-mediawiki.conf.j2', dest: '/etc/nginx/conf.d/mediawiki.conf' }
+  - { name: 'etc-nginx-confa-mediawiki.conf.j2', dest: '/etc/nginx/conf-available/mediawiki.conf' }
+  - { name: 'etc-initd-parsoid.j2', dest: '/etc/init.d/parsoid', mode: '0755' }
+  - { name: 'services-parsoid-localsettings.js.j2', dest: '{{ target_mediawiki_root }}/services/parsoid/localsettings.js' }
+  - { name: 'mediawiki-root-LocalSettings.php.dist.j2', dest: '{{ target_mediawiki_root }}/LocalSettings.php.dist' }
+
+# .. envvar:: mediawiki_skins
+#
+# List of skins will be download to mediawiki
+mediawiki_skins:
+  - { name: 'apex', ver: '{{ mediawiki_version }}' }
+  - { name: 'Metrolook' }
+  - { name: 'Nimbus' }
+  - { name: 'Vector' }
+
+# .. envvar:: mediawiki_extensions
+#
+# List of extensions will be download to mediawiki
+mediawiki_extensions:
+  - { name: 'CategoryTree' }           # provides a dynamic view of the wiki's catagory structure as a tree
+  - { name: 'Cite' }                   # allows footnotes for citing sources and helps for correctly citing content
+  - { name: 'CiteThisPage' }           # adds a special page that provides different citation format
+  - { name: 'ConfirmEdit' }            # adds CAPTCHAs for page saves and other user actions
+  - { name: 'Gadgets' }                # allows users to enable JS-based, user-provided gadgets from preference page
+  - { name: 'Interwiki' }              # adds the "Special:Interwiki" page to MediaWiki, to view and edit the interwiki table
+  - { name: 'ImageMap' }               # allows clickable image maps
+  - { name: 'InputBox' }               # allows users to add predefined HTML forms
+  - { name: 'LocalisationUpdate' }     # allows to update the locations for MediaWiki message without upgrade the MediaWiki
+  - { name: 'Nuke' }                   # give sysops the ability to mass delete pages
+  - { name: 'ParserFunctions' }        # enhances parser with logical and string functions
+  - { name: 'PdfHandler' }             # allows to handle PDF files
+  - { name: 'SpamBlacklist' }          # prevents edits that contain URLs whose domains match regular expression patterns
+  - { name: 'SemanticForms' }          # allows to create forms for creating and editing pages that use infobox-style templates
+  - { name: 'SyntaxHighlight_GeSHi' }  # provides rich formating of source code using the <syntaxhighlight> tag
+  - { name: 'TitleBlacklist' }         # allows wiki admin to block the creation, movement and upload of pages
+  - { name: 'TemplateSandbox' }        # Preview pages using sandboxed templates
+  - { name: 'VisualEditor' }           # integrates VisualEditor into MediaWiki for editing pages as rich content
+  - { name: 'Validator' }              # provides generic parameter handling support to other extensions
+
+# .. envvar:: mediawiki_services
+#
+# List of services will be download to mediawiki
+mediawiki_services:
+  - { name: 'parsoid' }               #  structured as a web service, using for VisualEditor
