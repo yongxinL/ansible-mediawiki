@@ -1,0 +1,103 @@
+# =============================================================================
+#
+# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
+#
+# - This is part of HomeVault imagebuilder project.
+# - This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# =============================================================================
+
+---
+- name: update target and install required {{ install_role_name }} packages
+  package: 
+    name: "{{ item.package }}={{ item.version }}"
+    state: present
+  register: install_pkgs
+  until: install_pkgs|success
+  retries: 2
+  delay: 5
+  with_flattened:
+    - "{{ mediawiki_base_packages }}"
+    - "{{ mediawiki_packages }}"
+
+- name: update target and create {{ install_role_name }} sharing directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0644
+  with_flattened:
+    - "{{ target_appdata_root }}"
+    - "{{ target_mediawiki_root }}"
+
+- name: update target and clone {{ install_role_name }} core from repository
+  git:
+    repo: https://gerrit.wikimedia.org/r/p/mediawiki/core.git
+    dest: "{{ target_mediawiki_root }}"
+    version: "{{ mediawiki_version }}"
+    depth: 1
+    force: yes
+
+- name: update target and install php composer for {{ install_role_name }}
+  get_url:
+    url: "https://getcomposer.org/installer"
+    dest: "{{ target_mediawiki_root }}/composer-setup.php"
+
+- name: update target and install php composer for {{ install_role_name }} 
+  command: "{{ item }} chdir={{ target_mediawiki_root }}"
+  with_items:
+    - php composer-setup.php
+    - php -r "unlink('composer-setup.php');"
+
+- name: update target and clone {{ install_role_name }} vendor from repository
+  git:
+    repo: https://gerrit.wikimedia.org/r/p/mediawiki/vendor.git
+    dest: "{{ target_mediawiki_root }}/vendor"
+    version: "{{ mediawiki_version }}"
+    depth: 1
+    force: yes
+
+- name: update target and clone {{ install_role_name }} skins from repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/skins/{{ item.name }}.git"
+    dest: "{{ target_mediawiki_root }}/skins/{{ item.name }}"
+    version: "{{ item.ver|default(mediawiki_version) }}"
+    depth: 1
+    force: yes
+  with_flattened:
+    - "{{ mediawiki_skins }}"
+
+- name: update target and clone {{ install_role_name }} extensions from repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/extensions/{{ item.name }}.git"
+    dest: "{{ target_mediawiki_root }}/extensions/{{ item.name }}"
+    version: "{{ item.ver|default(mediawiki_version) }}"
+    depth: 1
+    force: yes
+  with_flattened:
+    - "{{ mediawiki_extensions }}"
+
+- name: update target and create {{ install_role_name }} services directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0644
+  with_flattened:
+    - "{{ target_mediawiki_root }}/services"
+
+- name: update target and clone {{ install_role_name }} services from repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/services/{{ item.name }}"
+    dest: "{{ target_mediawiki_root }}/services/{{ item.name }}"
+    version: "{{ item.ver|default('master') }}"
+    depth: 1
+    force: yes
+  with_flattened:
+    - "{{ mediawiki_services }}"
+
+- name: update target and initial {{ install_role_name }} Parsoid Service
+  command:  "{{ item }}
+            chdir={{ target_mediawiki_root }}/services/parsoid"
+  with_items:
+    - npm install

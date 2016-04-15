@@ -1,0 +1,144 @@
+# =============================================================================
+#
+# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
+#
+# - This is part of HomeVault imagebuilder project.
+# - This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# =============================================================================
+
+---
+- name: update target and initial {{ install_role_name }} extensions
+  command:  git submodule update --init
+            chdir={{ target_mediawiki_root }}/extensions/{{ item.name }}
+  with_flattened:
+    - "{{ mediawiki_extensions }}"
+
+- name: update target and add {{ install_role_name }} domain
+  lineinfile:
+    dest: "/etc/hosts"
+    line: '127.0.0.1  {{ mediawiki_server }}'
+    state: present
+
+- name: update target and start MySQL server service
+  service:
+    name: mysql
+    state: started
+
+- name: update target and generate mysql user password
+  command: /usr/bin/openssl rand -base64 16
+  register: wiki_db_passwd
+
+- name: update target and remove {{ install_role_name }} database user
+  mysql_user:
+    name: "{{ mediawiki_db_user }}"
+    login_user: root
+    login_password: "{{ target_root_password }}"
+    state: absent
+
+- name: update target and add {{ install_role_name }} database user
+  mysql_user:
+    name: "{{ mediawiki_db_user }}"
+    login_user: root
+    login_password: "{{ target_root_password }}"
+    password: "{{ wiki_db_passwd.stdout }}"
+    priv: "{{ mediawiki_db_name }}.*:ALL"
+    state: present
+
+- name: update target and create a new database for {{ install_role_name }}
+  mysql_db:
+    name: "{{ item.name }}"
+    login_user: root
+    login_password: "{{ target_root_password }}"
+    collation: "{{ item.collation | default('utf8_general_ci') }}"
+    encoding: "{{ item.encoding | default('utf8') }}"
+    state: present
+  with_items:
+    - { name: "{{ mediawiki_db_name }}" }
+
+- name: update target and copy {{ install_role_name }} configure files
+  template:
+    src: "{{ item.name }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|default('0644') }}"
+  with_flattened:
+    - "{{ mediawiki_configuration }}"
+
+- name: update target and install {{ install_role_name }}
+  command: >
+    php {{ target_mediawiki_root }}/maintenance/install.php \
+      --dbuser {{ mediawiki_db_user }} --dbpass {{ wiki_db_passwd.stdout }} \
+      --dbname {{ mediawiki_db_name }} --dbserver localhost --dbtype mysql --dbprefix wiki_ \
+      --email postmaster@yongxin.info \
+      --installdbuser {{ mediawiki_db_user }} --installdbpass {{ wiki_db_passwd.stdout }} \
+      --server http://{{ mediawiki_server }} --pass {{ target_root_password }} \
+      familyAdmin
+    chdir={{ target_mediawiki_root }}
+
+- name: update target and backup {{ install_role_name }} installation configure
+  command:  "{{ item }}
+            chdir={{ target_mediawiki_root }}"
+  with_items:
+    - mv LocalSettings.php LocalSettings.php.install
+    - mv LocalSettings.php.dist LocalSettings.php
+
+- name: update target and initial {{ install_role_name }} Semantic extension
+  command:  "{{ item }}
+            chdir={{ target_mediawiki_root }}"
+  with_items:
+    - php composer.phar require mediawiki/semantic-media-wiki "~2.3" --update-no-dev
+    - php composer.phar require mediawiki/semantic-result-formats "2.3.*" --update-no-dev
+    - php composer.phar require mediawiki/semantic-maps "*" --update-no-dev
+    - php maintenance/update.php
+
+- name: update target and enable Semantic extension in {{ install_role_name }}
+  lineinfile:
+    dest: "{{ target_mediawiki_root }}/LocalSettings.php"
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - "enableSemantics( '{{ target_host_domain }}' );"
+
+- name: update target and start {{ install_role_name }} Parsoid service
+  service:
+    name: parsoid
+    state: started
+
+- name: update target and start MySQL server service
+  service:
+    name: nginx
+    state: restarted
+
+- name: update target and include init-functions into rc.local
+  lineinfile:
+    dest: "/etc/rc.local"
+    line: ". /lib/lsb/init-functions"
+    insertafter: "# By default this script does nothing."
+    owner: root
+    group: root
+    mode: 0755
+    state: present
+    create: yes
+
+- name: update target and start {{ install_role_name }} Parsoid service from rc.local
+  blockinfile:
+    dest: "/etc/rc.local"
+    insertbefore: "exit 0"
+    marker: "# {mark} MANAGED {{ install_role_name }} BLOCK"
+    owner: root
+    group: root
+    mode: 0755
+    state: present
+    create: yes   
+    block: |
+      log_begin_msg "Starting {{ install_role_name }} Parsoid service"
+      if [ $(ps -ef | grep -c nodejs) != 1 ]; then
+        service parsoid restart > /dev/null
+      else
+        service parsoid start > /dev/null
+      fi
+      log_end_msg 0
