@@ -1,0 +1,60 @@
+location /wiki/ {
+    alias {{ target_mediawiki_root }}/;
+    index index.php;
+
+    # uncomment after Wiki setup
+    # mediaWiki rewrite rule
+    # rewrite ^/([^?]*)(?:\?(.*))? /index.php5?title=$1&$2 last;
+}
+
+location ~ ^/wiki/(.+\.php)$ {
+    alias {{ target_mediawiki_root }}/$1;
+    fastcgi_pass   127.0.0.1:9000;
+    fastcgi_index  index.php;
+    fastcgi_param  SCRIPT_FILENAME $request_filename;
+    include        /etc/nginx/fastcgi_params;
+}
+
+location ~ ^/wiki/maintenance/ {
+    return 403;
+}
+
+location ~ ^/wiki/(.+\.js|.css|.png|.jpg|.jpeg|.gif|.ico)$ {
+    expires max;
+    log_not_found off;
+}
+location = /_.gif {
+    expires max;
+    empty_gif;
+}
+
+# Mark all of these directories as "internal", which means that they cannot
+# be explicitly accessed by clients. However, the web server can still use
+# and serve the files inside of them.
+
+location  ~ ^/wiki/bin/ { internal; }
+location  ~ ^/wiki/docs/ { internal; }
+# location  ~ ^/wiki/extensions/ { internal; }
+location  ~ ^/wiki/includes/ { internal; }
+location  ~ ^/wiki/maintenance/ { internal; }
+location  ~ ^/wiki/resources/lib/ { internal; }
+location  ~ ^/wiki/resources/src/ { internal; }
+location  ~ ^/wiki/serialized/ { internal; }
+location  ~ ^/wiki/skins/ { internal; }
+
+# Uncomment after installation
+# location  ~ ^/wiki/mw-config/ { internal; }
+
+# Force potentially-malicious files in the /images directory to be served
+# with a text/plain mime type, to prevent them from being executed by
+# the PHP handler
+location ~* ^/wiki/images/.*.(html|htm|shtml|php)$ {
+    types { }
+    default_type text/plain;
+}
+
+# Redirect all requests for unknown URLs out of images and back to the
+# root index.php file
+location ^~ ^/wiki/images/ {
+    try_files $uri /wiki/index.php;
+}
