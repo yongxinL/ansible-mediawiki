@@ -27,7 +27,9 @@ $wgMetaNamespace = "FamilyWiki";
 ## (like /w/index.php/Page_title to /wiki/Page_title) please see:
 ## https://www.mediawiki.org/wiki/Manual:Short_URL
 $wgScriptPath = "";
+$wgArticlePath = "/wiki/$1";
 $wgScriptExtension = ".php";
+$wgUsePathInfo = true;
 
 ## The protocol and server name to use in fully-qualified URLs
 $wgServer = "http://{{ mediawiki_server }}";
@@ -50,12 +52,12 @@ $wgPasswordSender = "postmaster@{{ target_host_domain }}";
 
 $wgEnotifUserTalk = false; # UPO
 $wgEnotifWatchlist = false; # UPO
-$wgEmailAuthentication = true;
+$wgEmailAuthentication = false;
 
 ## Database settings
 $wgDBtype = "mysql";
 $wgDBserver = "localhost";
-$wgDBname = "yongxin_webdb";
+$wgDBname = "{{ mediawiki_db_name }}";
 $wgDBuser = "{{ mediawiki_db_user }}";
 $wgDBpassword = "{{ wiki_db_passwd.stdout }}";
 
