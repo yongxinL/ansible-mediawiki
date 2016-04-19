@@ -12,7 +12,7 @@
 ---
 - name: update target and install required {{ install_role_name }} packages
   package: 
-    name: "{{ item.package }}={{ item.version }}"
+    name: "{{ item.package }}={{ item.version|default('*') }}"
     state: present
   register: install_pkgs
   until: install_pkgs|success
@@ -60,9 +60,9 @@
 
 - name: update target and clone {{ install_role_name }} skins from repository
   git:
-    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/skins/{{ item.name }}.git"
-    dest: "{{ target_mediawiki_root }}/skins/{{ item.name }}"
-    version: "{{ item.ver|default(mediawiki_version) }}"
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/skins/{{ item.package }}.git"
+    dest: "{{ target_mediawiki_root }}/skins/{{ item.package }}"
+    version: "{{ item.version|default(mediawiki_version) }}"
     depth: 1
     force: yes
   with_flattened:
@@ -70,13 +70,19 @@
 
 - name: update target and clone {{ install_role_name }} extensions from repository
   git:
-    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/extensions/{{ item.name }}.git"
-    dest: "{{ target_mediawiki_root }}/extensions/{{ item.name }}"
-    version: "{{ item.ver|default(mediawiki_version) }}"
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/extensions/{{ item.package }}.git"
+    dest: "{{ target_mediawiki_root }}/extensions/{{ item.package }}"
+    version: "{{ item.version|default(mediawiki_version) }}"
     depth: 1
     force: yes
   with_flattened:
     - "{{ mediawiki_extensions }}"
+
+- name: update target and initial {{ install_role_name }} Elastica extension
+  command:  "{{ item }}
+            chdir={{ target_mediawiki_root }}/extensions/Elastica"
+  with_items:
+    - php {{ target_mediawiki_root }}/composer.phar install
 
 - name: update target and create {{ install_role_name }} services directory
   file:
@@ -88,11 +94,18 @@
 
 - name: update target and clone {{ install_role_name }} services from repository
   git:
-    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/services/{{ item.name }}"
-    dest: "{{ target_mediawiki_root }}/services/{{ item.name }}"
-    version: "{{ item.ver|default('master') }}"
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/services/{{ item.package }}"
+    dest: "{{ target_mediawiki_root }}/services/{{ item.package }}"
+    version: "{{ item.version|default('master') }}"
     depth: 1
     force: yes
+  with_flattened:
+    - "{{ mediawiki_services }}"
+
+- name: update target and remove .git from extensions repository
+  file:
+    path: "{{ target_mediawiki_root }}/services/{{ item.package }}/.git"
+    state: absent
   with_flattened:
     - "{{ mediawiki_services }}"
 
