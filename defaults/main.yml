@@ -38,7 +38,7 @@ mediawiki_sitename: 'Family Library'
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
-mediawiki_version: 'REL1_25'
+mediawiki_version: 'REL1_26'
 
 # .. envvar:: mediawiki_db_name
 #
@@ -161,7 +161,6 @@ mediawiki_extensions:
   - { package: 'ParserFunctions' }            # enhances parser with logical and string functions
   - { package: 'Popups' }                     # displays popups with summaries when users hover over article links
   - { package: 'PdfHandler' }                 # allows to handle PDF files
-  - { package: 'Score' }                      # allows rendering of musical scores with LilyPond
   - { package: 'SpamBlacklist' }              # prevents edits that contain URLs whose domains match regular expression patterns
   - { package: 'SemanticCompoundQueries' }    # allows for the display of more than one SMW inline query in one result display set
   - { package: 'SemanticForms' }              # allows to create forms for creating and editing pages that use infobox-style templates
