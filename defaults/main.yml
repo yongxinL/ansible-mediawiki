@@ -30,6 +30,11 @@ target_host_domain: 'yongxin.info'
 # Specify server name to use for MediaWiki
 mediawiki_server: 'wiki.{{ target_host_domain }}'
 
+# .. envvar:: mediawiki_server
+#
+# Specify server name to use for MediaWiki
+mediawiki_sitename: 'Family Library'
+
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
@@ -47,8 +52,28 @@ mediawiki_db_user: 'webconn'
 
 # .. envvar:: target_root_password
 #
-# Specify root password
+# Specify root password for both of os and database
 target_root_password: 'secret'
+
+# .. envvar:: mediawiki_admin_user
+#
+# Specify admin user for mediaWiki site
+mediawiki_admin_user: 'wikiadmin'
+
+# .. envvar:: mediawiki_admin_password
+#
+# Specify admin password for mediaWiki site
+mediawiki_admin_password: '{{ target_root_password }}'
+
+# .. envvar:: mediawiki_admin_email
+#
+# Specify admin email for mediaWiki site
+mediawiki_admin_email: 'wiki@{{ target_host_domain }}'
+
+# .. envvar:: mediawiki_logo
+#
+# Specify log file for mediaWiki site, add $wgResourceBasePath in the front
+mediawiki_logo: '$wgResourceBasePath/resources/assets/wiki.png'
 
 # .. envvar:: target_appdata_root
 #
@@ -62,63 +87,99 @@ target_appdata_root:
 # in case if you want to collect all appdata files in one
 target_mediawiki_root: '{{ target_appdata_root }}/wiki'
 
+# .. envvar:: mediawiki_remove_git
+#
+# Specify this if you want to remove .git folder to save space
+mediawiki_remove_git: 'yes'
+
 # .. envvar:: nginx_base_packages
 #
 # List of base packages to install by Ansible
+# package: package will be installed
+# version: package version, default is '*'
+# example: - { package: 'package', version: '1.2' }
 mediawiki_base_packages:
-  - { package: 'git', version: '*' }
+  - { package: 'git' }
 
 # .. envvar:: nginx_packages
 #
 # List of additional packages to install by Ansible
+# package: package will be installed
+# version: package version, default is '*'
+# example: - { package: 'package', version: '1.2' }
 mediawiki_packages: []
 
 # .. envvar:: nginx_configuration
 #
 # List of configuration file will be copy to Linux base filesystems
 mediawiki_configuration:
-  - { name: 'etc-nginx-confd-wikiconf.ini.j2', dest: '/etc/nginx/conf.d/wikiconf.ini' }
   - { name: 'etc-nginx-confd-mediawiki.conf.j2', dest: '/etc/nginx/conf.d/mediawiki.conf' }
-  - { name: 'etc-nginx-confa-mediawiki.conf.j2', dest: '/etc/nginx/conf-available/mediawiki.conf' }
+  - { name: 'etc-nginx-confd-wikicommon.ini.j2', dest: '/etc/nginx/conf.d/wikicommon.ini' }
   - { name: 'etc-initd-parsoid.j2', dest: '/etc/init.d/parsoid', mode: '0755' }
   - { name: 'services-parsoid-localsettings.js.j2', dest: '{{ target_mediawiki_root }}/services/parsoid/localsettings.js' }
-  - { name: 'mediawiki-root-LocalSettings.php.dist.j2', dest: '{{ target_mediawiki_root }}/LocalSettings.php.dist' }
+  - { name: 'mediawiki-root-LocalSettings.php.j2', dest: '{{ target_mediawiki_root }}/LocalSettings.php' }
 
 # .. envvar:: mediawiki_skins
 #
 # List of skins will be download to mediawiki
+# package: package will be installed
+# version: package version, default is '*'
+# example: - { package: 'package', version: '{{ mediawiki_version }}' }
 mediawiki_skins:
-  - { name: 'apex', ver: '{{ mediawiki_version }}' }
-  - { name: 'Metrolook' }
-  - { name: 'Nimbus' }
-  - { name: 'Vector' }
+  - { package: 'apex' }
+  - { package: 'Metrolook' }
+  - { package: 'Nimbus' }
+  - { package: 'Vector' }
 
 # .. envvar:: mediawiki_extensions
 #
 # List of extensions will be download to mediawiki
+# package: package will be installed
+# version: package version, default is '*'
+# example: - { package: 'package', version: '{{ mediawiki_version }}' }
 mediawiki_extensions:
-  - { name: 'CategoryTree' }           # provides a dynamic view of the wiki's catagory structure as a tree
-  - { name: 'Cite' }                   # allows footnotes for citing sources and helps for correctly citing content
-  - { name: 'CiteThisPage' }           # adds a special page that provides different citation format
-  - { name: 'ConfirmEdit' }            # adds CAPTCHAs for page saves and other user actions
-  - { name: 'Gadgets' }                # allows users to enable JS-based, user-provided gadgets from preference page
-  - { name: 'Interwiki' }              # adds the "Special:Interwiki" page to MediaWiki, to view and edit the interwiki table
-  - { name: 'ImageMap' }               # allows clickable image maps
-  - { name: 'InputBox' }               # allows users to add predefined HTML forms
-  - { name: 'LocalisationUpdate' }     # allows to update the locations for MediaWiki message without upgrade the MediaWiki
-  - { name: 'Nuke' }                   # give sysops the ability to mass delete pages
-  - { name: 'ParserFunctions' }        # enhances parser with logical and string functions
-  - { name: 'PdfHandler' }             # allows to handle PDF files
-  - { name: 'SpamBlacklist' }          # prevents edits that contain URLs whose domains match regular expression patterns
-  - { name: 'SemanticForms' }          # allows to create forms for creating and editing pages that use infobox-style templates
-  - { name: 'SyntaxHighlight_GeSHi' }  # provides rich formating of source code using the <syntaxhighlight> tag
-  - { name: 'TitleBlacklist' }         # allows wiki admin to block the creation, movement and upload of pages
-  - { name: 'TemplateSandbox' }        # Preview pages using sandboxed templates
-  - { name: 'VisualEditor' }           # integrates VisualEditor into MediaWiki for editing pages as rich content
-  - { name: 'Validator' }              # provides generic parameter handling support to other extensions
+  - { package: 'CategoryTree' }               # provides a dynamic view of the wiki's catagory structure as a tree
+  - { package: 'CirrusSearch' }               # implements searching for MediaWiki using ElasticSearch
+  - { package: 'Cite' }                       # allows footnotes for citing sources and helps for correctly citing content
+  - { package: 'CiteThisPage' }               # adds a special page that provides different citation format
+  - { package: 'ConfirmEdit' }                # adds CAPTCHAs for page saves and other user actions
+  - { package: 'DynamicPageList' }            # create lists of other articles based on their category.
+  - { package: 'Echo' }                       # implements Echo, Wiki's next-generation notification subsystem
+  - { package: 'Elastica' }                   # provides base ElasticSearch functionality
+  - { package: 'Flow' }                       # provides a new discussion and collaboration system for talk pages
+  - { package: 'Gadgets' }                    # allows users to enable JS-based, user-provided gadgets from preference page
+  - { package: 'Interwiki' }                  # adds the "Special:Interwiki" page to MediaWiki, to view and edit the interwiki table
+  - { package: 'ImageMap' }                   # allows clickable image maps
+  - { package: 'InputBox' }                   # allows users to add predefined HTML forms
+  - { package: 'LdapAuthentication' }         # provides LDAP authentication and some authorization functionality for MediaWiki
+  - { package: 'LocalisationUpdate' }         # allows to update the locations for MediaWiki message without upgrade the MediaWiki
+  - { package: 'MobileFrontend' }             # provides a mobile-friendly view
+  - { package: 'MultimediaViewer' }           # provides a better experience to users when they click on thumbnails in a page
+  - { package: 'MwEmbedSupport' }             # adds support for mwEmbed modules and extensions
+  - { package: 'Nuke' }                       # give sysops the ability to mass delete pages
+  - { package: 'PageImages' }                 # stores information about images representing a page
+  - { package: 'ParserFunctions' }            # enhances parser with logical and string functions
+  - { package: 'Popups' }                     # displays popups with summaries when users hover over article links
+  - { package: 'PdfHandler' }                 # allows to handle PDF files
+  - { package: 'Score' }                      # allows rendering of musical scores with LilyPond
+  - { package: 'SpamBlacklist' }              # prevents edits that contain URLs whose domains match regular expression patterns
+  - { package: 'SemanticCompoundQueries' }    # allows for the display of more than one SMW inline query in one result display set
+  - { package: 'SemanticForms' }              # allows to create forms for creating and editing pages that use infobox-style templates
+  - { package: 'SyntaxHighlight_GeSHi' }      # provides rich formating of source code using the <syntaxhighlight> tag
+  - { package: 'TemplateData' }               # allows to store, retrieve and visualise information about templates
+  - { package: 'TitleBlacklist' }             # allows wiki admin to block the creation, movement and upload of pages
+  - { package: 'TimedMediaHandler' }          # integrated support for server side transcoding, WebM, Ogg Theora, Vorbis, Speex and timed text
+  - { package: 'UniversalLanguageSelector' }  # tool that allows users to select a language and configure its support in an easy way
+  - { package: 'VisualEditor' }               # integrates VisualEditor into MediaWiki for editing pages as rich content
+  - { package: 'Validator' }                  # provides generic parameter handling support to other extensions
+  - { package: 'Widgets' }                    # allows adding free-type widgets to the wiki by editing pages
+  - { package: 'WikiEditor' }                 # provides an improved interface for editing wikitext
 
 # .. envvar:: mediawiki_services
 #
 # List of services will be download to mediawiki
+# package: package will be installed
+# version: package version, default is '*'
+# example: - { package: 'package', version: '1.2' }
 mediawiki_services:
-  - { name: 'parsoid' }               #  structured as a web service, using for VisualEditor
+  - { package: 'parsoid' }               #  structured as a web service, using for VisualEditor
