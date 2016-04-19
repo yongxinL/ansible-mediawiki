@@ -18,7 +18,9 @@ function stop(){
 }
 function start(){
   echo "Starting Parsoid..."
-  /usr/bin/nodejs --max-executable-size=192 --max-old-space-size=256 --max-semi-space-size=2 {{ target_mediawiki_root }}/services/parsoid/bin/server.js >> nohup.out 2>&1 &
+  /usr/bin/nodejs --max-executable-size=128 --max-old-space-size=192 --max-semi-space-size=2 \
+  {{ target_mediawiki_root }}/services/parsoid/bin/server.js --num-workers 2 \
+  --config {{ target_mediawiki_root }}/services/parsoid/localsettings.js  >> /var/log/parsoid.log 2>&1 &
 }
 
 # Carry out specific functions when asked to by the system

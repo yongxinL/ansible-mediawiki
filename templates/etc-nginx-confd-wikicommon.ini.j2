@@ -1,0 +1,101 @@
+#
+# common nginx configuration for Wiki {{ mediawiki_server }}
+#
+
+# Common settings for a wiki powered by MediaWiki with the following configuration
+# 1. wiki is location in $root/w folder
+# 2. article path ($wgArticlePath) is "/wiki/$1" 
+# 3. $wgUsePathInfo is true
+
+    # rewrite rule for article path
+    location /wiki/ {
+        try_files   $uri    $uri/   /w/index.php?$query_string;
+    }
+
+    location ~ ^/w/images/thumb/(archive/)?[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ {
+        #Note: this doesn't work with InstantCommons.
+        if (!-f $request_filename) {
+            rewrite ^/w/images/thumb/[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ /w/thumb.php?f=$1&width=$2;
+            rewrite ^/w/images/thumb/archive/[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ /w/thumb.php?f=$1&width=$2&archived=1;
+        }
+    }
+
+    # Remote index.php from URI
+    rewrite ^/w/index.php/(.*) /$1  permanent;
+
+    # Exclude all access from the cache directory
+    location ^~ /w/cache/ {
+        deny all;
+    }
+
+    # Prevent access to any files starting with a dot, like .htaccess 
+    # or text editor temp files
+    location ~ /w/\. {
+        access_log off;
+        log_not_found off;
+        deny all;
+    }
+
+    # Prevent access to any files starting with a $ (usually temp files)
+    location ~ ^/w/~$ {
+        access_log off;
+        log_not_found off;
+        deny all;
+    }
+
+    # Do not log access to robots.txt, to keep the logs cleaner
+    location /w/robots.txt {
+        access_log off;
+        log_not_found off;
+        deny all;
+    }
+
+    # Do not log access to the favicon, to keep the logs cleaner
+    location /w/favicon.ico {
+        access_log off;
+        log_not_found off;
+        deny all;
+    }
+
+    # Keep images and CSS around in browser cache for as long as possible
+    # to cut down on server load
+    location ~* /w/\.(js|css|png|jpg|jpeg|gif|ico)$ {
+        try_files $uri  /w/index.php;
+        expires max;
+        log_not_found off;
+    }
+
+    # Mark all of these directories as "internal", which means that they cannot
+    # be explicitly accessed by clients. However, the web server can still use
+    # and serve the files inside of them. This keeps people from paking around 
+    # in the wiki's internals.
+    location ~ ^/w/(cache|includes|maintenance|languages|serialized|tests|images/deleted)/ {
+        deny all;
+    }
+    location ~ ^/w/(bin|docs|includes|maintenance|mw-config|resources/lib|resources/src|serialized|tests)/ {
+        internal;
+    }
+
+    # restriction on extension folders
+{% if mediawiki_extensions is defined and mediawiki_extensions %}
+{% for item in mediawiki_extensions %}
+{% if item.package != 'WikiEditor' %}
+    location ~ ^/w/extensions/{{ item.package }}/ { internal; } 
+{% endif %}
+{% endfor %}
+{% endif %}
+
+    # Force potentially-malicious files in the /images directory to be served
+    # with a text/plain mime type, to prevent them from being executed by
+    # the PHP handler
+    location ~* ^/w/images/.*.(html|htm|shtml|php)$ {
+        types { }
+        default_type text/plain;
+    }
+
+    # TODO
+    # Redirect all requests for unknown URLs out of images and back to the
+    # root index.php file
+    #location ^~ ^/w/images/ {
+    #    try_files $uri /w/index.php;
+    #}

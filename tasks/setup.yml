@@ -12,7 +12,7 @@
 ---
 - name: update target and initial {{ install_role_name }} extensions
   command:  git submodule update --init
-            chdir={{ target_mediawiki_root }}/extensions/{{ item.name }}
+            chdir={{ target_mediawiki_root }}/extensions/{{ item.package }}
   with_flattened:
     - "{{ mediawiki_extensions }}"
 
@@ -58,6 +58,17 @@
   with_items:
     - { name: "{{ mediawiki_db_name }}" }
 
+- name: update target and install {{ install_role_name }}
+  command: >
+    php {{ target_mediawiki_root }}/maintenance/install.php \
+      --dbuser {{ mediawiki_db_user }} --dbpass {{ wiki_db_passwd.stdout }} \
+      --dbname {{ mediawiki_db_name }} --dbserver localhost --dbtype mysql --dbprefix wiki_ \
+      --email {{ mediawiki_admin_email }} \
+      --installdbuser {{ mediawiki_db_user }} --installdbpass {{ wiki_db_passwd.stdout }} \
+      --server http://{{ mediawiki_server }} --pass {{ mediawiki_admin_password }} \
+      {{ mediawiki_admin_user }}
+    chdir={{ target_mediawiki_root }}
+
 - name: update target and copy {{ install_role_name }} configure files
   template:
     src: "{{ item.name }}"
@@ -65,26 +76,9 @@
     owner: root
     group: root
     mode: "{{ item.mode|default('0644') }}"
+    backup: yes
   with_flattened:
     - "{{ mediawiki_configuration }}"
-
-- name: update target and install {{ install_role_name }}
-  command: >
-    php {{ target_mediawiki_root }}/maintenance/install.php \
-      --dbuser {{ mediawiki_db_user }} --dbpass {{ wiki_db_passwd.stdout }} \
-      --dbname {{ mediawiki_db_name }} --dbserver localhost --dbtype mysql --dbprefix wiki_ \
-      --email postmaster@yongxin.info \
-      --installdbuser {{ mediawiki_db_user }} --installdbpass {{ wiki_db_passwd.stdout }} \
-      --server http://{{ mediawiki_server }} --pass {{ target_root_password }} \
-      familyAdmin
-    chdir={{ target_mediawiki_root }}
-
-- name: update target and backup {{ install_role_name }} installation configure
-  command:  "{{ item }}
-            chdir={{ target_mediawiki_root }}"
-  with_items:
-    - mv LocalSettings.php LocalSettings.php.install
-    - mv LocalSettings.php.dist LocalSettings.php
 
 - name: update target and initial {{ install_role_name }} Semantic extension
   command:  "{{ item }}
@@ -102,6 +96,13 @@
     state: present
   with_items:
     - "enableSemantics( '{{ target_host_domain }}' );"
+
+- name: update target and remove .git recursively
+  shell:  "{{ item }}
+          chdir={{ target_mediawiki_root }}"
+  with_items:
+    - "find . | grep .git | xargs rm -rf"
+  when: mediawiki_remove_git == 'yes'
 
 - name: update target and start {{ install_role_name }} Parsoid service
   service:
