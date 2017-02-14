@@ -18,9 +18,10 @@ function stop(){
 }
 function start(){
   echo "Starting Parsoid..."
+  [ ! -d /var/log/mediawiki ] && { mkdir -p /var/log/mediawiki }
   /usr/bin/nodejs --max-executable-size=128 --max-old-space-size=192 --max-semi-space-size=2 \
-  {{ target_mediawiki_root }}/services/parsoid/bin/server.js --num-workers 2 \
-  --config {{ target_mediawiki_root }}/services/parsoid/localsettings.js  >> /var/log/parsoid.log 2>&1 &
+  {{ mediawiki_root }}/extensions/parsoid/bin/server.js --num-workers 2 \
+  --config {{ mediawiki_root }}/extensions/parsoid/localsettings.js  >> /var/log/mediawiki/parsoid.log 2>&1 &
 }
 
 # Carry out specific functions when asked to by the system

@@ -21,7 +21,7 @@ server {
         return 444;
     }
 
-    # redirect to https
+    # redirect to https if required
     #return 301 https://$host$request_uri;
     
     # document root
@@ -34,11 +34,11 @@ server {
     }
 
     location /w/ {
-        alias               {{ target_mediawiki_root }}/;
+        alias               {{ mediawiki_root }}/;
     }
 
     location ~ ^/w/(.+\.php5)$ {
-        alias                       {{ target_mediawiki_root }}/$1;
+        alias                       {{ mediawiki_root }}/$1;
         fastcgi_pass                127.0.0.1:9000;
         fastcgi_param               SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include                     /etc/nginx/fastcgi_params;
@@ -46,7 +46,7 @@ server {
     }
 
     location ~ ^/w/(.+\.php)$ {
-        alias                       {{ target_mediawiki_root }}/$1;
+        alias                       {{ mediawiki_root }}/$1;
         fastcgi_pass                127.0.0.1:9000;
         fastcgi_param               SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include                     /etc/nginx/fastcgi_params;
@@ -57,7 +57,7 @@ server {
     # 1. wiki is location in $root/w folder
     # 2. article path ($wgArticlePath) is "/wiki/$1" 
     # 3. $wgUsePathInfo is true
-    include /etc/nginx/conf.d/wikicommon.ini;
+    include /etc/nginx/conf.d/wiki.ini;
 }
 
 ## https server at port 443. You need to provide ssl config here.
@@ -68,6 +68,9 @@ server {
 
     # virtual host domains
     server_name             {{ mediawiki_server }};
+
+    # redirect to httpd if required
+    return 301 http://$host$request_uri;
 
     # accept requests only for this domain
     if ($host !~ .({{ target_host_domain }})$) {
@@ -99,11 +102,11 @@ server {
     }
 
     location /w/ {
-        alias               {{ target_mediawiki_root }}/;
+        alias               {{ mediawiki_root }}/;
     }
 
     location ~ ^/w/(.+\.php5)$ {
-        alias                       {{ target_mediawiki_root }}/$1;
+        alias                       {{ mediawiki_root }}/$1;
         fastcgi_pass                127.0.0.1:9000;
         fastcgi_param               HTTPS on;
         fastcgi_param               SCRIPT_FILENAME $document_root$fastcgi_script_name;
@@ -112,7 +115,7 @@ server {
     }
 
     location ~ ^/w/(.+\.php)$ {
-        alias                       {{ target_mediawiki_root }}/$1;
+        alias                       {{ mediawiki_root }}/$1;
         fastcgi_pass                127.0.0.1:9000;
         fastcgi_param               HTTPS on;
         fastcgi_param               SCRIPT_FILENAME $document_root$fastcgi_script_name;
@@ -124,5 +127,5 @@ server {
     # 1. wiki is location in $root/w folder
     # 2. article path ($wgArticlePath) is "/wiki/$1" 
     # 3. $wgUsePathInfo is true
-    include /etc/nginx/conf.d/wikicommon.ini;
+    include /etc/nginx/conf.d/wiki.ini;
 }

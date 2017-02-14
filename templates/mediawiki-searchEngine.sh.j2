@@ -1,0 +1,72 @@
+#!/bin/bash
+# =============================================================================
+#
+# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
+#
+# - This is part of HomeVault imagebuilder project.
+# - Initialization before starting {{ install_role_name }}services
+#
+# - This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# =============================================================================
+
+. /lib/lsb/init-functions
+
+cd {{ mediawiki_root }}
+
+log_begin_msg "Stop searchEngine (ElasticSearch) container"
+docker ps | grep 'searchEngine' | awk '{print $1}' | xargs --no-run-if-empty docker stop -t 2 > {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+
+sleep 60
+log_begin_msg "remove existing ElasticSearch containers"
+docker ps -a --filter "status=exited" | grep 'searchEngine' | awk '{print $1}' | xargs --no-run-if-empty docker rm >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+
+sleep 5
+log_begin_msg "remove existing ElasticSearch images"
+docker images | grep 'elasticsearch' | awk '{print $3}' | xargs --no-run-if-empty docker rmi >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+
+{% if mediawiki_version == "REL1_27" %}
+log_begin_msg "Pulling latest ElasticSearch docker image..."
+docker pull elasticsearch:1.7-alpine >> {{ mediawiki_root }}/searchEngine.log
+docker run -d --name searchEngine --restart always  -p 9200:9200 -p 9300:9300 elasticsearch:1.7-alpine >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+{% else %}
+log_begin_msg "Pulling latest ElasticSearch docker image..."
+docker pull elasticsearch:2-alpine >> {{ mediawiki_root }}/searchEngine.log
+docker run -d --name searchEngine --restart always -p 9200:9200 -p 9300:9300 elasticsearch:2-alpine >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+{% endif %}
+
+sleep 30
+log_begin_msg "Updating {{ install_role_name }} configuration file..."
+sed -i 's/^#require_once\(.*\)/require_once\1/g' {{ mediawiki_root }}/LocalSettings.php >> {{ mediawiki_root }}/searchEngine.log
+sed -i 's/^#$wgDisableSearchUpdate\(.*\)/$wgDisableSearchUpdate\1/g' {{ mediawiki_root }}/LocalSettings.php >> {{ mediawiki_root }}/searchEngine.log
+sed -i 's/^$wgSearchType\(.*\)/#$wgSearchType\1/g' {{ mediawiki_root }}/LocalSettings.php  >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+
+sleep 5
+log_begin_msg "Generating ElasticSearch index..."
+php {{ mediawiki_root }}/extensions/CirrusSearch/maintenance/updateSearchIndexConfig.php >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+
+sleep 5
+log_begin_msg "Updating {{ install_role_name }} configuration file..."
+sed -i 's/^$wgDisableSearchUpdate\(.*\)/#$wgDisableSearchUpdate\1/g' LocalSettings.php  >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+
+sleep 5
+log_begin_msg "Bootstrap the Search index ..."
+php extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipLinks --indexOnSkip >> {{ mediawiki_root }}/searchEngine.log
+sleep 5
+php extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipParse >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0
+
+sleep 5
+log_begin_msg "Updating {{ install_role_name }} configuration file..."
+sed -i 's/^#$wgSearchType\(.*\)/$wgSearchType\1/g' LocalSettings.php  >> {{ mediawiki_root }}/searchEngine.log
+log_end_msg 0

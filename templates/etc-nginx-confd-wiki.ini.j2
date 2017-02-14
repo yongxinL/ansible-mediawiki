@@ -12,6 +12,11 @@
         try_files   $uri    $uri/   /w/index.php?$query_string;
     }
 
+    # rewrite rule for UrlShortener
+    location ~ ^/r/(.*) {
+        return 301  /w/index.php?title=Special:UrlRedirector/$1;
+    }
+
     location ~ ^/w/images/thumb/(archive/)?[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ {
         #Note: this doesn't work with InstantCommons.
         if (!-f $request_filename) {
@@ -77,11 +82,16 @@
     }
 
     # restriction on extension folders
+{% if mediawiki_core_extensions is defined and mediawiki_core_extensions %}
+{% for item in mediawiki_core_extensions %}
+{% if item.name != 'WikiEditor' and item.name != 'CodeEditor' %}
+    location ~ ^/w/extensions/{{ item.name }}/ { internal; } 
+{% endif %}
+{% endfor %}
+{% endif %}
 {% if mediawiki_extensions is defined and mediawiki_extensions %}
 {% for item in mediawiki_extensions %}
-{% if item.package != 'WikiEditor' %}
-    location ~ ^/w/extensions/{{ item.package }}/ { internal; } 
-{% endif %}
+    location ~ ^/w/extensions/{{ item.name }}/ { internal; } 
 {% endfor %}
 {% endif %}
 
