@@ -10,107 +10,145 @@
 # =============================================================================
 
 ---
-- name: update target and install required {{ install_role_name }} packages
+- name: install required {{ ansible_distribution }} packages
   package: 
-    name: "{{ item.package }}={{ item.version|default('*') }}"
+    name: "{{ item }}"
     state: present
   register: install_pkgs
   until: install_pkgs|success
   retries: 2
   delay: 5
-  with_flattened:
-    - "{{ mediawiki_base_packages }}"
-    - "{{ mediawiki_packages }}"
+  with_items: "{{ mediawiki_base_packages }}"
 
-- name: update target and create {{ install_role_name }} sharing directory
+- name: create {{ install_role_name }} root directory
   file:
-    path: "{{ item }}"
+    path: "{{ mediawiki_root.split('/')[0:-1]|join('/') }}"
     state: directory
     mode: 0644
-  with_flattened:
-    - "{{ target_appdata_root }}"
-    - "{{ target_mediawiki_root }}"
 
-- name: update target and clone {{ install_role_name }} core from repository
+- name: clone {{ install_role_name }} core from repository
   git:
-    repo: https://gerrit.wikimedia.org/r/p/mediawiki/core.git
-    dest: "{{ target_mediawiki_root }}"
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/core.git"
+    dest: "{{ mediawiki_root }}"
     version: "{{ mediawiki_version }}"
     depth: 1
     force: yes
 
-- name: update target and install php composer for {{ install_role_name }}
+- name: download php composer (required by {{ install_role_name }})
   get_url:
     url: "https://getcomposer.org/installer"
-    dest: "{{ target_mediawiki_root }}/composer-setup.php"
+    dest: "{{ mediawiki_root }}/composer-setup.php"
 
-- name: update target and install php composer for {{ install_role_name }} 
-  command: "{{ item }} chdir={{ target_mediawiki_root }}"
+- name: install php composer (required by {{ install_role_name }})
+  command: "{{ item }} chdir={{ mediawiki_root }}"
   with_items:
     - php composer-setup.php
     - php -r "unlink('composer-setup.php');"
 
-- name: update target and clone {{ install_role_name }} vendor from repository
+- name: clone vendor from {{ install_role_name }} repository
+  command:  "{{ item }}
+            chdir={{ mediawiki_root }}"
+  with_items:
+    - php {{ mediawiki_root }}/composer.phar install --no-dev
+
+- name: clone skins from {{ install_role_name }} repository
   git:
-    repo: https://gerrit.wikimedia.org/r/p/mediawiki/vendor.git
-    dest: "{{ target_mediawiki_root }}/vendor"
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/skins/{{ item.name }}.git"
+    dest: "{{ mediawiki_root }}/skins/{{ item.name }}"
     version: "{{ mediawiki_version }}"
     depth: 1
     force: yes
+  with_items: "{{ mediawiki_core_skins }}"
 
-- name: update target and clone {{ install_role_name }} skins from repository
+- name: clone skins from 3rd-party repository
   git:
-    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/skins/{{ item.package }}.git"
-    dest: "{{ target_mediawiki_root }}/skins/{{ item.package }}"
-    version: "{{ item.version|default(mediawiki_version) }}"
+    repo: "{{ item.repo }}"
+    dest: "{{ mediawiki_root }}/skins/{{ item.name }}"
+    version: "{{ item.version }}"
+    depth: 1
+    force: yes
+  with_items: "{{ mediawiki_3rdparty_skins }}"
+
+- name: clone extension from {{ install_role_name }} repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/extensions/{{ item.name }}.git"
+    dest: "{{ mediawiki_root }}/extensions/{{ item.name }}"
+    version: "{{ mediawiki_version }}"
     depth: 1
     force: yes
   with_flattened:
-    - "{{ mediawiki_skins }}"
+    - "{{ mediawiki_core_extensions }}"
+    - "{{ mediawiki_uncore_extensions }}"
 
-- name: update target and clone {{ install_role_name }} extensions from repository
+- name: clone extension from 3rd-party repository
   git:
-    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/extensions/{{ item.package }}.git"
-    dest: "{{ target_mediawiki_root }}/extensions/{{ item.package }}"
-    version: "{{ item.version|default(mediawiki_version) }}"
+    repo: "{{ item.repo }}"
+    dest: "{{ mediawiki_root }}/extensions/{{ item.name }}"
+    version: "{{ item.version }}"
     depth: 1
     force: yes
-  with_flattened:
-    - "{{ mediawiki_extensions }}"
+  with_items: "{{ mediawiki_3rdparty_extensions }}"
 
-- name: update target and initial {{ install_role_name }} Elastica extension
-  command:  "{{ item }}
-            chdir={{ target_mediawiki_root }}/extensions/Elastica"
+- name: initialize {{ install_role_name }} extension and submodule
+  command: "git submodule update --init
+            chdir={{ mediawiki_root }}/extensions/{{ item.name }}"
+  with_flattened:
+    - "{{ mediawiki_core_extensions }}"
+    - "{{ mediawiki_uncore_extensions }}"
+
+- name: initialize {{ install_role_name }} extension and submodule
+  command: "php {{ mediawiki_root }}/composer.phar install
+            chdir={{ mediawiki_root }}/extensions/{{ item.name }}"
+  with_items: "{{ mediawiki_extension_dependency }}"
+
+- name: clone CKeditor from 3rd-party repository
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ mediawiki_root }}/extensions/{{ item.name }}"
+    version: "{{ item.version }}"
+    depth: 1
+    force: yes
+  with_items: "{{ mediawiki_Editor_CKeditor }}"
+  when: mediawiki_editor == 'CKeditor'
+
+- name: update CKeditor extension
+  command: "{{ item }}
+            chdir={{ mediawiki_root }}/extensions"
   with_items:
-    - php {{ target_mediawiki_root }}/composer.phar install
+    - mv {{ mediawiki_root }}/extensions/WYSIWYG-CKeditor/WYSIWYG {{ mediawiki_root }}/extensions
+    - rm -rf {{ mediawiki_root }}/extensions/WYSIWYG-CKeditor
+    - rm -rf {{ mediawiki_root }}/extensions/WYSIWYG/ckeditor_source
+  when: mediawiki_editor == 'CKeditor'
 
-- name: update target and create {{ install_role_name }} services directory
-  file:
-    path: "{{ item }}"
-    state: directory
-    mode: 0644
-  with_flattened:
-    - "{{ target_mediawiki_root }}/services"
-
-- name: update target and clone {{ install_role_name }} services from repository
+- name: clone VisualEditor from {{ install_role_name }} repository
   git:
-    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/services/{{ item.package }}"
-    dest: "{{ target_mediawiki_root }}/services/{{ item.package }}"
-    version: "{{ item.version|default('master') }}"
+    repo: "{{ item.repo }}"
+    dest: "{{ mediawiki_root }}/extensions/{{ item.name }}"
+    version: "{{ item.version|default(mediawiki_version) }}"
     depth: 1
     force: yes
-  with_flattened:
-    - "{{ mediawiki_services }}"
+  with_items: "{{ mediawiki_Editor_VisualEditor }}"
+  when: mediawiki_editor == 'VisualEditor'
 
-- name: update target and remove .git from extensions repository
-  file:
-    path: "{{ target_mediawiki_root }}/services/{{ item.package }}/.git"
-    state: absent
-  with_flattened:
-    - "{{ mediawiki_services }}"
-
-- name: update target and initial {{ install_role_name }} Parsoid Service
+- name: initialize {{ install_role_name }} parsoid service
   command:  "{{ item }}
-            chdir={{ target_mediawiki_root }}/services/parsoid"
+            chdir={{ mediawiki_root }}/extensions/parsoid"
   with_items:
     - npm install
+  when: mediawiki_editor == 'VisualEditor'
+
+- name: remove .git recursively from installation
+  shell:  "{{ item }}
+          chdir={{ mediawiki_root }}"
+  with_items:
+    - "find . | grep .git | xargs rm -rf"
+  when: mediawiki_remove_git
+
+- name: cleanup {{ install_role_name }} installation
+  shell:  "{{ item }}
+          chdir={{ mediawiki_root }}"
+  with_items:
+    - rm -f COPYING CREDITS FAQ HISTORY INSTALL README README.mediawiki RELEASE-NOTES-1.{{ mediawiki_version.split('_')[1] }} UPGRADE
+    - rm -rf docs tests
+    - find {{ mediawiki_root }}/languages/i18n/ -type f -not \( -iname 'en*' -or -iname 'zh*' \) | xargs rm -f
+    - find . -print | while read filename; do touch -d 'Oct 1 2016' "$filename"; done
