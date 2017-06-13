@@ -12,13 +12,18 @@
         try_files   $uri    $uri/   /w/index.php?$query_string;
     }
 
-    location ~ ^/w/images/thumb/(archive/)?[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ {
-        #Note: this doesn't work with InstantCommons.
-        if (!-f $request_filename) {
-            rewrite ^/w/images/thumb/[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ /w/thumb.php?f=$1&width=$2;
-            rewrite ^/w/images/thumb/archive/[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ /w/thumb.php?f=$1&width=$2&archived=1;
-        }
+    # rewrite rule for UrlShortener
+    location ~ ^/r/(.*) {
+        return 301  /w/index.php?title=Special:UrlRedirector/$1;
     }
+
+    #Note: this doesn't work with InstantCommons and MultiMedia Viewer
+    #location ~ ^/w/images/thumb/(archive/)?[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ {
+    #    if (!-f $request_filename) {
+    #        rewrite ^/w/images/thumb/[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ /w/thumb.php?f=$1&width=$2;
+    #        rewrite ^/w/images/thumb/archive/[0-9a-f]/[0-9a-f][0-9a-f]/([^/]+)/([0-9]+)px-.*$ /w/thumb.php?f=$1&width=$2&archived=1;
+    #    }
+    #}
 
     # Remote index.php from URI
     rewrite ^/w/index.php/(.*) /$1  permanent;
@@ -77,10 +82,10 @@
     }
 
     # restriction on extension folders
-{% if mediawiki_extensions is defined and mediawiki_extensions %}
-{% for item in mediawiki_extensions %}
-{% if item.package != 'WikiEditor' %}
-    location ~ ^/w/extensions/{{ item.package }}/ { internal; } 
+{% if mediawiki_core_extensions %}
+{% for item in mediawiki_core_extensions %}
+{% if item.name != 'WikiEditor' and item.name != 'CodeEditor' and item.name != 'Popups' and item.name != 'RelatedArticles' and item.name != 'Echo' %}
+    location ~ ^/w/extensions/{{ item.name }}/ { internal; } 
 {% endif %}
 {% endfor %}
 {% endif %}
