@@ -10,5 +10,18 @@
 # =============================================================================
 
 ---
+- name: check if {{ install_role_name }} has installed and configured
+  find:
+    paths: "{{ mediawiki_root }}"
+    pattern: 'LocalSettings.php'
+    file_type: file
+  register: wiki_status
+
+- name: debug
+  debug:
+    msg: "wiki_status: {{ wiki_status.matched }}"
+
 - include: install-debian.yml
+
 - include: setup.yml
+  when: wiki_status.matched|int == 0

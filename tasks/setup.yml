@@ -10,35 +10,83 @@
 # =============================================================================
 
 ---
-- name: update target and initial {{ install_role_name }} extensions
-  command:  git submodule update --init
-            chdir={{ target_mediawiki_root }}/extensions/{{ item.package }}
-  with_flattened:
-    - "{{ mediawiki_extensions }}"
-
-- name: update target and add {{ install_role_name }} domain
+- name: add {{ install_role_name }} domain to localhost
   lineinfile:
     dest: "/etc/hosts"
     line: '127.0.0.1  {{ mediawiki_server }}'
     state: present
 
-- name: update target and start MySQL server service
+- name: check if php 5.x installed
+  stat:
+    path: "/etc/php5/fpm/php.ini"
+  register: php5_exist
+
+- name: update php.ini configuration (php 5.x)
+  lineinfile:
+    dest: '/etc/php5/fpm/php.ini'
+    regexp: "{{ item.regxp }}"
+    line: "{{ item.line }}"
+    state: present
+  with_items:
+    - { regxp: '^post_max_size.*', line: 'post_max_size = 768M' }
+    - { regxp: '^upload_max_filesize.*', line: 'upload_max_filesize = 768M' }
+    - { regxp: '^allow_url_fopen.*', line: 'allow_url_fopen = off' }
+    - { regxp: '^session.use_trans_sid.*', line: 'session.use_trans_sid = 0' }
+    - { regxp: '^;opcache.enable.*', line: 'opcache.enable = 1' }
+    - { regxp: '^;opcache.enable_cli.*', line: 'opcache.enable_cli = 1' }
+    - { regxp: '^;opcache.memory_consumption.*', line: 'opcache.;opcache.memory_consumption = 64' }
+    - { regxp: '^;opcache.interned_strings_buffer.*', line: 'opcache.interned_strings_buffer = 8' }
+    - { regxp: '^;opcache.max_accelerated_files.*', line: 'opcache.max_accelerated_files = 8000' }
+    - { regxp: '^;opcache.max_wasted_percentage.*', line: 'opcache.max_wasted_percentage = 5' }
+    - { regxp: '^;opcache.validate_timestamps.*', line: 'opcache.validate_timestamps = 1' }
+    - { regxp: '^;opcache.revalidate_freq.*', line: 'opcache.revalidate_freq = 60' }
+    - { regxp: '^;opcache.fast_shutdown.*', line: 'opcache.fast_shutdown = 1' }
+  when: php5_exist.stat.exists == True
+  
+- name: check if php 7.x installed
+  stat:
+    path: "/etc/php/7.0/fpm/php.ini"
+  register: php7_exist
+
+- name: update php.ini configuration (php 7.x)
+  lineinfile:
+    dest: '/etc/php/7.0/fpm/php.ini'
+    regexp: "{{ item.regxp }}"
+    line: "{{ item.line }}"
+    state: present
+  with_items:
+    - { regxp: '^post_max_size.*', line: 'post_max_size = 768M' }
+    - { regxp: '^upload_max_filesize.*', line: 'upload_max_filesize = 768M' }
+    - { regxp: '^allow_url_fopen.*', line: 'allow_url_fopen = off' }
+    - { regxp: '^session.use_trans_sid.*', line: 'session.use_trans_sid = 0' }    
+    - { regxp: '^;opcache.enable.*', line: 'opcache.enable = 1' }
+    - { regxp: '^;opcache.enable_cli.*', line: 'opcache.enable_cli = 1' }
+    - { regxp: '^;opcache.memory_consumption.*', line: 'opcache.;opcache.memory_consumption = 64' }
+    - { regxp: '^;opcache.interned_strings_buffer.*', line: 'opcache.interned_strings_buffer = 8' }
+    - { regxp: '^;opcache.max_accelerated_files.*', line: 'opcache.max_accelerated_files = 8000' }
+    - { regxp: '^;opcache.max_wasted_percentage.*', line: 'opcache.max_wasted_percentage = 5' }
+    - { regxp: '^;opcache.validate_timestamps.*', line: 'opcache.validate_timestamps = 1' }
+    - { regxp: '^;opcache.revalidate_freq.*', line: 'opcache.revalidate_freq = 60' }
+    - { regxp: '^;opcache.fast_shutdown.*', line: 'opcache.fast_shutdown = 1' }
+  when: php7_exist.stat.exists == True
+
+- name: start MySQL database server
   service:
     name: mysql
     state: started
 
-- name: update target and generate mysql user password
+- name: generate password {{ install_role_name }} db user
   command: /usr/bin/openssl rand -base64 16
   register: wiki_db_passwd
 
-- name: update target and remove {{ install_role_name }} database user
+- name: remove existing {{ install_role_name }} db user
   mysql_user:
     name: "{{ mediawiki_db_user }}"
     login_user: root
     login_password: "{{ target_root_password }}"
     state: absent
 
-- name: update target and add {{ install_role_name }} database user
+- name: create {{ install_role_name }} db user
   mysql_user:
     name: "{{ mediawiki_db_user }}"
     login_user: root
@@ -47,7 +95,16 @@
     priv: "{{ mediawiki_db_name }}.*:ALL"
     state: present
 
-- name: update target and create a new database for {{ install_role_name }}
+- name: remove existing {{ install_role_name }} database
+  mysql_db:
+    name: "{{ item.name }}"
+    login_user: root
+    login_password: "{{ target_root_password }}"    
+    state: absent
+  with_items:
+    - { name: "{{ mediawiki_db_name }}" }
+    
+- name: create {{ install_role_name }} database
   mysql_db:
     name: "{{ item.name }}"
     login_user: root
@@ -58,18 +115,26 @@
   with_items:
     - { name: "{{ mediawiki_db_name }}" }
 
-- name: update target and install {{ install_role_name }}
+- name: stop NTP services
+  service:
+    name: ntp
+    state: stopped
+
+- name: change system date before initialize database
+  command: date --set 'Oct 11 2016'
+
+- name: initialize {{ install_role_name }} database
   command: >
-    php {{ target_mediawiki_root }}/maintenance/install.php \
+    php {{ mediawiki_root }}/maintenance/install.php \
       --dbuser {{ mediawiki_db_user }} --dbpass {{ wiki_db_passwd.stdout }} \
       --dbname {{ mediawiki_db_name }} --dbserver localhost --dbtype mysql --dbprefix wiki_ \
       --email {{ mediawiki_admin_email }} \
       --installdbuser {{ mediawiki_db_user }} --installdbpass {{ wiki_db_passwd.stdout }} \
       --server http://{{ mediawiki_server }} --pass {{ mediawiki_admin_password }} \
       {{ mediawiki_admin_user }}
-    chdir={{ target_mediawiki_root }}
+    chdir={{ mediawiki_root }}
 
-- name: update target and copy {{ install_role_name }} configure files
+- name: copy {{ install_role_name }} configure files
   template:
     src: "{{ item.name }}"
     dest: "{{ item.dest }}"
@@ -77,69 +142,56 @@
     group: root
     mode: "{{ item.mode|default('0644') }}"
     backup: yes
-  with_flattened:
-    - "{{ mediawiki_configuration }}"
+  with_items: "{{ mediawiki_configuration }}"
 
-- name: update target and initial {{ install_role_name }} Semantic extension
-  command:  "{{ item }}
-            chdir={{ target_mediawiki_root }}"
+- name: copy {{ install_role_name }} configure files
+  template:
+    src: "{{ item.name }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|default('0644') }}"
+    backup: yes
+  with_items: "{{ mediawiki_Editor_VE_configuration }}"
+
+- name: create directory for database backup
+  file:
+    path: "{{ mediawiki_root }}/dbs"
+    state: directory
+    mode: 0755
+
+- name: dump {{ install_role_name }} database
+  mysql_db:
+    name: "{{ item.name }}"
+    login_user: root
+    login_password: "{{ target_root_password }}"
+    state: dump
+    target: "{{ mediawiki_root }}/dbs/{{ install_role_name }}_{{ mediawiki_version }}_emptydb.sql"
   with_items:
-    - php composer.phar require mediawiki/semantic-media-wiki "~2.3" --update-no-dev
-    - php composer.phar require mediawiki/semantic-result-formats "2.3.*" --update-no-dev
-    - php composer.phar require mediawiki/semantic-maps "*" --update-no-dev
-    - php maintenance/update.php
+    - { name: "{{ mediawiki_db_name }}" }
 
-- name: update target and enable Semantic extension in {{ install_role_name }}
-  lineinfile:
-    dest: "{{ target_mediawiki_root }}/LocalSettings.php"
-    line: "{{ item }}"
-    state: present
-  with_items:
-    - "enableSemantics( '{{ target_host_domain }}' );"
-
-- name: update target and remove .git recursively
+- name: Do maintenance with {{ install_role_name }} installation
   shell:  "{{ item }}
-          chdir={{ target_mediawiki_root }}"
+          chdir={{ mediawiki_root }}"
+  with_items:
+    - php maintenance/populateContentModel.php --wiki={{ mediawiki_sitename | replace(" ","_") }} --ns=all --table=revision
+    - php maintenance/populateContentModel.php --wiki={{ mediawiki_sitename | replace(" ","_") }} --ns=all --table=archive
+    - php maintenance/populateContentModel.php --wiki={{ mediawiki_sitename | replace(" ","_") }} --ns=all --table=page
+    - php maintenance/update.php --quick
+
+- name: remove .git recursively from installation
+  shell:  "{{ item }}
+          chdir={{ mediawiki_root }}"
   with_items:
     - "find . | grep .git | xargs rm -rf"
-  when: mediawiki_remove_git == 'yes'
+  when: mediawiki_remove_git
 
-- name: update target and start {{ install_role_name }} Parsoid service
+- name: start NTP services
   service:
-    name: parsoid
+    name: ntp
     state: started
 
-- name: update target and start MySQL server service
+- name: restart Web server service
   service:
     name: nginx
     state: restarted
-
-- name: update target and include init-functions into rc.local
-  lineinfile:
-    dest: "/etc/rc.local"
-    line: ". /lib/lsb/init-functions"
-    insertafter: "# By default this script does nothing."
-    owner: root
-    group: root
-    mode: 0755
-    state: present
-    create: yes
-
-- name: update target and start {{ install_role_name }} Parsoid service from rc.local
-  blockinfile:
-    dest: "/etc/rc.local"
-    insertbefore: "exit 0"
-    marker: "# {mark} MANAGED {{ install_role_name }} BLOCK"
-    owner: root
-    group: root
-    mode: 0755
-    state: present
-    create: yes   
-    block: |
-      log_begin_msg "Starting {{ install_role_name }} Parsoid service"
-      if [ $(ps -ef | grep -c nodejs) != 1 ]; then
-        service parsoid restart > /dev/null
-      else
-        service parsoid start > /dev/null
-      fi
-      log_end_msg 0
