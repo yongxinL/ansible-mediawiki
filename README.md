@@ -1,1 +1,1 @@
-Ansible playbook for MediaWiki installation, include Semantic mediawiki extensions
+Ansible playbook for MediaWiki installation, include VisualEditor and Parsoid service
