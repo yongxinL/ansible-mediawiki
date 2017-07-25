@@ -40,7 +40,7 @@ wgDBuser=$(sed -n 's/^$wgDBuser = "\([^"]*\)";/\1/p' ${_self_root}/LocalSettings
 wgDBpasswd=$(sed -n 's/^$wgDBpassword = "\([^"]*\)";/\1/p' ${_self_root}/LocalSettings.php)
 
 echo " To create a sqldump, please use below command: "
-echo " mysqldump -h localhost -u root -p ${wgDBname} > ${_self_root}/wikidb_dump.sql"
+echo " mysqldump -h localhost -u root -p ${wgDBname} > ${_self_root}/dbs/wikidb_dump_$(date '+%Y%m%d').sql"
 
 read -p "Are you sure you want to continue? <y/N> " prompt
 if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]]; then
@@ -52,9 +52,9 @@ if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]
     mysql -uroot -p${rootpasswd} -e "CREATE USER ${wgDBuser}@localhost IDENTIFIED BY '${wgDBpasswd}';"
     mysql -uroot -p${rootpasswd} -e "GRANT ALL PRIVILEGES ON ${wgDBname}.* TO '${wgDBuser}'@'localhost';"
     mysql -uroot -p${rootpasswd} -e "FLUSH PRIVILEGES;"
-    if [ -f "${_self_root}/wikidb_dump.sql" ]; then
+    if [ -f "${_self_root}/dbs/wikidb_dump.sql" ]; then
         log_info "import database backup ..."
-        mysql -uroot -p${rootpasswd} ${wgDBname} < wikidb_dump.sql
+        mysql -uroot -p${rootpasswd} ${wgDBname} < dbs/wikidb_dump.sql
         php ${_self_root}/maintenance/update.php --quick
     fi
 

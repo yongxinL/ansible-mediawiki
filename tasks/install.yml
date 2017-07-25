@@ -1,0 +1,158 @@
+# =============================================================================
+#
+# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
+#
+# - This is part of HomeVault imagebuilder project.
+# - This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# =============================================================================
+
+---
+- name: install required {{ install_role_name }} packages
+  package: 
+    name: "{{ item }}"
+    state: present
+  register: install_pkgs
+  until: install_pkgs|success
+  retries: 2
+  delay: 5
+  with_items: "{{ mediawiki_base_packages }}"
+  when: inst_status.stat.exists == True
+
+- name: create {{ install_role_name }} root directory
+  file:
+    path: "{{ mediawiki_root.split('/')[0:-1]|join('/') }}"
+    state: directory
+    mode: 0644
+
+- name: clone {{ install_role_name }} core from repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/core.git"
+    dest: "{{ mediawiki_root }}"
+    version: "{{ mediawiki_version }}"
+    depth: 1
+    force: yes
+    update: yes
+
+- name: download php composer (required by {{ install_role_name }})
+  get_url:
+    url: "https://getcomposer.org/installer"
+    dest: "{{ mediawiki_root }}/composer-setup.php"
+
+- name: install php composer (required by {{ install_role_name }})
+  command: "{{ item }} chdir={{ mediawiki_root }}"
+  with_items:
+    - php composer-setup.php
+    - php -r "unlink('composer-setup.php');"
+
+- name: clone vendor from {{ install_role_name }} repository
+  command:  "{{ item }}
+            chdir={{ mediawiki_root }}"
+  with_items:
+    - php {{ mediawiki_root }}/composer.phar install --no-dev
+
+- name: cleanup skins & extensions directory before cloning 
+  shell:  "{{ item }}
+          chdir={{ mediawiki_root }}"
+  with_items:
+    - find skins/* -maxdepth 1 ! -name 'README' | xargs rm -rf
+    - find extensions/* -maxdepth 1 ! -name 'README' | xargs rm -rf
+
+- name: clone skins from {{ install_role_name }} repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/skins/{{ item.name }}.git"
+    dest: "{{ mediawiki_root }}/skins/{{ item.name }}"
+    version: "{{ mediawiki_version }}"
+    depth: 1
+    force: yes
+    update: yes
+  with_items: "{{ mediawiki_core_skins }}"
+
+- name: clone skins from 3rd-party repository
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ mediawiki_root }}/skins/{{ item.name }}"
+    version: "{{ item.version }}"
+    depth: 1
+    force: yes
+    update: yes
+  with_items: "{{ mediawiki_3rdparty_skins }}"
+
+- name: clone extension from {{ install_role_name }} repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/extensions/{{ item.name }}.git"
+    dest: "{{ mediawiki_root }}/extensions/{{ item.name }}"
+    version: "{{ mediawiki_version }}"
+    depth: 1
+    force: yes
+    update: yes
+  with_items: "{{ mediawiki_core_extensions }}"
+
+- name: clone extension from 3rd-party repository
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ mediawiki_root }}/extensions/{{ item.name }}"
+    version: "{{ item.version }}"
+    depth: 1
+    force: yes
+    update: yes
+  with_items: "{{ mediawiki_3rdparty_extensions }}"
+
+- name: initialize {{ install_role_name }} extensions and submodule
+  command: "git submodule update --init
+            chdir={{ mediawiki_root }}/extensions/{{ item.name }}"
+  with_items: "{{ mediawiki_core_extensions }}"
+
+- name: initialize {{ install_role_name }} extension via php composer
+  command: "php {{ mediawiki_root }}/composer.phar install
+            chdir={{ mediawiki_root }}/extensions/{{ item.name }}"
+  with_items: "{{ mediawiki_extension_dependency }}"
+
+- name: update required packages (composer)
+  command: "php {{ mediawiki_root }}/composer.phar require {{ item.name }}:{{ item.version }} {{ item.option|default('') }}
+            chdir={{ mediawiki_root }}"
+  with_items: "{{ mediawiki_extension_bycomposer }}"
+
+- name: create {{ install_role_name }} services directory
+  file:
+    path: "{{ mediawiki_root.split('/')[0:-1]|join('/') }}services"
+    state: directory
+    mode: 0644
+
+- name: clone Parsoid Services from {{ install_role_name }} repository
+  git:
+    repo: "https://gerrit.wikimedia.org/r/p/mediawiki/services/{{ item.name }}.git"
+    dest: "{{ mediawiki_root }}/services/{{ item.name }}"
+    version: "{{ item.version }}"
+    depth: 1
+    force: yes
+    update: yes
+  with_items: "{{ mediawiki_core_services }}"
+
+- name: initialize {{ install_role_name }} Parsoid Services
+  shell:  "{{ item }}
+          chdir={{ mediawiki_root }}/services/parsoid"
+  with_items:
+    - npm install
+
+- name: copy {{ install_role_name }} customization files
+  copy:
+    src: "{{ item.name }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|default('0644') }}"
+    backup: yes
+  with_items: "{{ mediawiki_customization }}"
+
+- name: cleanup {{ install_role_name }} installation
+  shell:  "{{ item }}
+          chdir={{ mediawiki_root }}"
+  with_items:
+    - rm -f COPYING CREDITS FAQ HISTORY INSTALL README README.mediawiki UPGRADE
+    - rm -rf docs tests
+    - find {{ mediawiki_root }}/languages/i18n/ -type f -not \( -iname 'en*' -or -iname 'zh*' \) | xargs rm -f
+    - find . -print | while read filename; do touch -d 'Oct 11 2016' "$filename"; done
+    - tar -czvf ../mediawiki_REL1{{ mediawiki_version.split('_')[1] }}_setup_$(date '+%Y%m%d').tar.gz ../$(basename {{ mediawiki_root }})

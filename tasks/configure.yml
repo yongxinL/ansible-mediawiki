@@ -16,33 +16,6 @@
     line: '127.0.0.1  {{ mediawiki_server }}'
     state: present
 
-- name: check if php 5.x installed
-  stat:
-    path: "/etc/php5/fpm/php.ini"
-  register: php5_exist
-
-- name: update php.ini configuration (php 5.x)
-  lineinfile:
-    dest: '/etc/php5/fpm/php.ini'
-    regexp: "{{ item.regxp }}"
-    line: "{{ item.line }}"
-    state: present
-  with_items:
-    - { regxp: '^post_max_size.*', line: 'post_max_size = 768M' }
-    - { regxp: '^upload_max_filesize.*', line: 'upload_max_filesize = 768M' }
-    - { regxp: '^allow_url_fopen.*', line: 'allow_url_fopen = off' }
-    - { regxp: '^session.use_trans_sid.*', line: 'session.use_trans_sid = 0' }
-    - { regxp: '^;opcache.enable.*', line: 'opcache.enable = 1' }
-    - { regxp: '^;opcache.enable_cli.*', line: 'opcache.enable_cli = 1' }
-    - { regxp: '^;opcache.memory_consumption.*', line: 'opcache.;opcache.memory_consumption = 64' }
-    - { regxp: '^;opcache.interned_strings_buffer.*', line: 'opcache.interned_strings_buffer = 8' }
-    - { regxp: '^;opcache.max_accelerated_files.*', line: 'opcache.max_accelerated_files = 8000' }
-    - { regxp: '^;opcache.max_wasted_percentage.*', line: 'opcache.max_wasted_percentage = 5' }
-    - { regxp: '^;opcache.validate_timestamps.*', line: 'opcache.validate_timestamps = 1' }
-    - { regxp: '^;opcache.revalidate_freq.*', line: 'opcache.revalidate_freq = 60' }
-    - { regxp: '^;opcache.fast_shutdown.*', line: 'opcache.fast_shutdown = 1' }
-  when: php5_exist.stat.exists == True
-  
 - name: check if php 7.x installed
   stat:
     path: "/etc/php/7.0/fpm/php.ini"
@@ -75,15 +48,22 @@
     name: mysql
     state: started
 
-- name: generate password {{ install_role_name }} db user
+- name: generate db user password for {{ install_role_name }}
   command: /usr/bin/openssl rand -base64 16
   register: wiki_db_passwd
 
-- name: remove existing {{ install_role_name }} db user
+- name: remove existing {{ install_role_name }} database user
   mysql_user:
     name: "{{ mediawiki_db_user }}"
     login_user: root
     login_password: "{{ target_root_password }}"
+    state: absent
+
+- name: remove existing {{ install_role_name }} database
+  mysql_db:
+    name: "{{ mediawiki_db_name }}"
+    login_user: root
+    login_password: "{{ target_root_password }}"    
     state: absent
 
 - name: create {{ install_role_name }} db user
@@ -95,27 +75,16 @@
     priv: "{{ mediawiki_db_name }}.*:ALL"
     state: present
 
-- name: remove existing {{ install_role_name }} database
-  mysql_db:
-    name: "{{ item.name }}"
-    login_user: root
-    login_password: "{{ target_root_password }}"    
-    state: absent
-  with_items:
-    - { name: "{{ mediawiki_db_name }}" }
-    
 - name: create {{ install_role_name }} database
   mysql_db:
-    name: "{{ item.name }}"
+    name: "{{ mediawiki_db_name }}"
     login_user: root
     login_password: "{{ target_root_password }}"
-    collation: "{{ item.collation | default('utf8_general_ci') }}"
-    encoding: "{{ item.encoding | default('utf8') }}"
+    collation: "utf8_general_ci"
+    encoding: "utf8"
     state: present
-  with_items:
-    - { name: "{{ mediawiki_db_name }}" }
 
-- name: stop NTP services
+- name: temporary stop NTP services before changing system date
   service:
     name: ntp
     state: stopped
@@ -134,7 +103,7 @@
       {{ mediawiki_admin_user }}
     chdir={{ mediawiki_root }}
 
-- name: copy {{ install_role_name }} configure files
+- name: upload {{ install_role_name }} configuration files
   template:
     src: "{{ item.name }}"
     dest: "{{ item.dest }}"
@@ -144,33 +113,21 @@
     backup: yes
   with_items: "{{ mediawiki_configuration }}"
 
-- name: copy {{ install_role_name }} configure files
-  template:
-    src: "{{ item.name }}"
-    dest: "{{ item.dest }}"
-    owner: root
-    group: root
-    mode: "{{ item.mode|default('0644') }}"
-    backup: yes
-  with_items: "{{ mediawiki_Editor_VE_configuration }}"
-
-- name: create directory for database backup
+- name: create database backup directory
   file:
     path: "{{ mediawiki_root }}/dbs"
     state: directory
     mode: 0755
 
-- name: dump {{ install_role_name }} database
+- name: create first {{ install_role_name }} database
   mysql_db:
-    name: "{{ item.name }}"
+    name: "{{ mediawiki_db_name }}"
     login_user: root
     login_password: "{{ target_root_password }}"
     state: dump
-    target: "{{ mediawiki_root }}/dbs/{{ install_role_name }}_{{ mediawiki_version }}_emptydb.sql"
-  with_items:
-    - { name: "{{ mediawiki_db_name }}" }
+    target: "{{ mediawiki_root }}/dbs/{{ install_role_name }}_REL1_{{ mediawiki_version.split('_')[1] }}_emptydb.sql"
 
-- name: Do maintenance with {{ install_role_name }} installation
+- name: Enable {{ install_role_name }} Flow extension in all namespace
   shell:  "{{ item }}
           chdir={{ mediawiki_root }}"
   with_items:
@@ -183,15 +140,24 @@
   shell:  "{{ item }}
           chdir={{ mediawiki_root }}"
   with_items:
-    - "find . | grep .git | xargs rm -rf"
+    - "find . ! -name services | grep .git | xargs rm -rf"
   when: mediawiki_remove_git
 
-- name: start NTP services
-  service:
-    name: ntp
-    state: started
+- name: resync system date with public NTP services
+  command: ntpdate 0.au.pool.ntp.org
 
-- name: restart Web server service
-  service:
-    name: nginx
-    state: restarted
+- block:
+  - name: start related system services
+    service:
+      name: ntp
+      state: restarted
+  - service:
+      name: nginx
+      state: restarted
+  - service:
+      name: php7.0-fpm
+      state: restarted
+  - service:
+      name: parsoid
+      enabled: yes
+      state: restarted
