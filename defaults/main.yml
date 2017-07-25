@@ -49,13 +49,13 @@ mediawiki_sitename: 'Family Library'
 
 # .. envvar:: mediawiki_db_name
 #
-# specify the MediaWiki databaes user
-mediawiki_db_name: 'yongxin_webdb'
+# specify the MediaWiki databaes name
+mediawiki_db_name: 'wikidata_{{ mediawiki_uniqueid }}'
 
 # .. envvar:: mediawiki_db_user
 #
 # specify the MediaWiki databaes user
-mediawiki_db_user: 'webconn'
+mediawiki_db_user: '{{ install_role_name }}'
 
 # .. envvar:: target_root_password
 #
@@ -75,7 +75,7 @@ mediawiki_admin_password: '{{ target_root_password }}'
 # .. envvar:: mediawiki_admin_email
 #
 # Specify admin email for mediaWiki site
-mediawiki_admin_email: 'postmaster@{{ target_host_domain }}'
+mediawiki_admin_email: 'webmaster@{{ target_host_domain }}'
 
 # .. envvar:: mediawiki_logo
 #
@@ -99,11 +99,6 @@ mediawiki_root: '{{ target_appdata_root }}/wiki'
 # Specify this if you want to remove .git folder to save space
 mediawiki_remove_git: False
 
-# .. envvar:: mediawiki_Editor
-#
-# Specify which Editor will be install
-mediawiki_Editor: 'VisualEditor'
-
 # .. envvar:: mediawiki_base_packages
 #
 # List of required Linux packages for Mediawiki
@@ -120,14 +115,13 @@ mediawiki_core_skins:
 # .. envvar:: mediawiki_3rdparty_skins
 #
 # List of skins will be download from 3rd-party repository
-mediawiki_3rdparty_skins:
-  - { name: 'foreground', repo: 'https://github.com/thingles/foreground.git', version: '6757cbb', type: 'wfload' }
+mediawiki_3rdparty_skins: []
+  #- { name: 'foreground', repo: 'https://github.com/thingles/foreground.git', version: '6757cbb', type: 'wfload' }
 
 # .. envvar:: mediawiki_core_extensions
 #
 # List of skins will be download from MediaWiki repository, load with $wfLoadExtension
 mediawiki_core_extensions:
-  - { name: 'Cards', type: 'wfload' }                     # pretty-looking cards from article titles, required by RelatedArticles extension
   - { name: 'CategoryTree', type: 'require' }             # provides a dynamic view of the wiki's catagory structure as a tree
   - { name: 'CirrusSearch', type: 'require' }             # implements searching for MediaWiki using ElasticSearch
   - { name: 'Cite', type: 'wfload' }                      # allows footnotes for citing sources and helps for correctly citing content in offline media
@@ -136,6 +130,7 @@ mediawiki_core_extensions:
   - { name: 'ConfirmEdit', type: 'wfload' }               # adds CAPTCHAs for page savers and other user actions
   - { name: 'Echo', type: 'require' }                     # provides an in-wiki notification system that can be used by other extensions
   - { name: 'Elastica', type: 'wfload' }                  # provides base ElasticSearch functionality
+  - { name: 'EventLogging', type: 'require' }             # framework for logging analytic events
   - { name: 'Flow', type: 'require' }                     # provides a discussion and collaboration system for talk pages
   - { name: 'ImageMap', type: 'wfload' }                  # allows clickable image maps
   - { name: 'InputBox', type: 'wfload' }                  # allows users to add predefined HTML forms
@@ -143,19 +138,20 @@ mediawiki_core_extensions:
   - { name: 'LocalisationUpdate', type: 'wfload' }        # allows to update the locations for MediaWiki message without upgrade the MediaWiki
   - { name: 'MobileFrontend', type: 'wfload' }            # provides a mobile-friendly view
   - { name: 'MultimediaViewer', type: 'wfload' }          # provides a better experience to users when they click on thumbnails in a page
-  - { name: 'Nuke', type: 'wfload' }                      # give sysops the ability to mass delete pages
   - { name: 'ParserFunctions', type: 'wfload' }           # enhances parser with logical and string functions
   - { name: 'PdfHandler', type: 'wfload' }                # allows to handle PDF files
+  - { name: 'PageImages', type: 'wfload' }                # collect information about images used on a page. required by PopUp extension, require beofre 1.28
   - { name: 'ParsoidBatchAPI', type: 'wfload' }           # provides an API module which Parsoid uses to more effeciently
+  - { name: 'Popups', type: 'wfload' }                    # displays "hovercards" popups with summaries of article contents
   - { name: 'Quiz', type: 'wfload' }                      # quiz building tool for mediaWiki
-  - { name: 'RelatedArticles', type: 'wfload' }           # add a link to related pages on the sidebar
+  - { name: 'RevisionSlider', type: 'wfload' }            # adds a slider interface to the diff view
   - { name: 'Scribunto', type: 'require' }                # allws for embedding scripting language in MediaWiki.
   - { name: 'SyntaxHighlight_GeSHi', type: 'wfload' }     # provides rich formating of source code using the <syntaxhighlight> tag
   - { name: 'TemplateData', type: 'wfload' }              # allows to store, retrieve and visualise information about template
-  - { name: 'WikiEditor', type: 'wfload' }                # provides an improved interface for editing wikitext
   - { name: 'TextExtracts', type: 'wfload' }              # provides an API with allows to retrieve plain-text. required by PopUp extension
-  - { name: 'PageImages', type: 'wfload' }                # collect information about images used on a page. required by PopUp extension
-  - { name: 'Popups', type: 'wfload' }                    # displays "hovercards" popups with summaries of article contents
+  - { name: 'VisualEditor', type: 'wfload' }              # VisualEditor
+  - { name: 'WikiEditor', type: 'wfload' }                # provides an improved interface for editing wikitext
+  - { name: 'WikimediaEvents', type: 'wfload' }           # logs wikimedia-specific events using EventLogging
 
 # .. envvar:: mediawiki_3rdparty_extensions
 #
@@ -173,35 +169,29 @@ mediawiki_extension_dependency:
   - { name: 'Elastica' }
   - { name: 'SyntaxHighlight_GeSHi' }
 
-# .. envvar:: mediawiki_Editor_CKeditor
+# .. envvar:: mediawiki_core_services
 #
-# List of extensions need for CKeditor
-mediawiki_Editor_CKeditor:
-  - { name: 'WYSIWYG-CKeditor', repo: 'https://github.com/Mediawiki-wysiwyg/WYSIWYG-CKeditor.git', version: 'wysiwyg_mw128_462' }   # wysiwyg_mw127_459 for v1.27, wysiwyg_mw128_462 for v1.28
-
-# .. envvar:: mediawiki_Editor_VisualEditor
-#
-# List of extensions need for VisualEditor
-mediawiki_Editor_VE_extensions:
-  - { name: 'VisualEditor', type: 'wfload' }        # reliable rich-text editor for the Web and wiki
-
-# .. envvar:: mediawiki_Editor_VE_services
-#
-# List of extensions need for VisualEditor
-mediawiki_Editor_VE_services:
-  - { name: 'parsoid', version: 'master' }                             # reliable rich-text editor for the Web and wiki
-
-# .. envvar:: mediawiki_Editor_VE_configuration
-#
-# List of extensions need for VisualEditor
-mediawiki_Editor_VE_configuration:
-  - { name: 'services-parsoid-config.yaml.j2', dest: '{{ mediawiki_root }}/services/parsoid/config.yaml' }
-  - { name: 'etc-systemd-system-parsoid.service.j2', dest: '/etc/systemd/system/parsoid.service', mode: '0755' }
+# List of core services need for MediaWiki
+mediawiki_core_services:
+  - { name: 'parsoid', version: 'master' }                # reliable rich-text editor for the Web and wiki
 
 # .. envvar:: mediawiki_extensions_3rdparty
 #
 # List of extensions will be install/update by php composer
 mediawiki_extension_bycomposer: []
+
+# .. envvar:: mediawiki_customization
+#
+# List of configuration file will be copy to Linux base filesystems
+mediawiki_customization:
+  - { name: 'images/', dest: '{{ mediawiki_root }}/images/' }
+  - { name: 'skins/vector/bootstrap_v4a', dest: '{{ mediawiki_root }}/skins/Vector' }
+  - { name: 'skins/vector/fonts', dest: '{{ mediawiki_root }}/skins/Vector' }
+  - { name: 'skins/vector/skin.json', dest: '{{ mediawiki_root }}/skins/Vector/skin.json' }
+  - { name: 'mediawiki-searchEngine.sh', dest: '{{ mediawiki_root }}/searchEngine.sh', mode: '0755' }
+  - { name: 'mediawiki-wikiUploader.sh', dest: '{{ mediawiki_root }}/wikiUploader.sh', mode: '0755' }
+  - { name: 'mediawiki-prepareMySQL.sh', dest: '{{ mediawiki_root }}/prepareMySQL.sh', mode: '0755' }
+  - { name: 'mediawiki-scripts_library.sh', dest: '{{ mediawiki_root }}/scripts_library.sh' }
 
 # .. envvar:: mediawiki_configuration
 #
@@ -210,13 +200,6 @@ mediawiki_configuration:
   - { name: 'etc-nginx-confd-wiki.conf.j2', dest: '/etc/nginx/conf.d/wiki.conf' }
   - { name: 'etc-nginx-confd-wiki.ini.j2', dest: '/etc/nginx/conf.d/wiki.ini' }
   - { name: 'mediawiki-LocalSettings.php.j2', dest: '{{ mediawiki_root }}/LocalSettings.php' }
-
-# .. envvar:: mediawiki_customization
-#
-# List of configuration file will be copy to Linux base filesystems
-mediawiki_customization:
-  - { name: 'mediawiki-searchEngine.sh', dest: '{{ mediawiki_root }}/searchEngine.sh', mode: '0755' }
-  - { name: 'mediawiki-imagesUploader.sh', dest: '{{ mediawiki_root }}/imagesUploader.sh', mode: '0755' }
-  - { name: 'mediawiki-prepareMySQL.sh', dest: '{{ mediawiki_root }}/prepareMySQL.sh', mode: '0755' }
-  - { name: 'mediawiki-scripts_library.sh', dest: '{{ mediawiki_root }}/scripts_library.sh' }
-  - { name: 'images/', dest: '{{ mediawiki_root }}/images/' }
+  - { name: 'mediawiki-docker-compose.yml.j2', dest: '{{ mediawiki_root }}/docker-compose.yml', mode: '0755' }
+  - { name: 'services-parsoid-config.yaml.j2', dest: '{{ mediawiki_root }}/services/parsoid/config.yaml' }
+  - { name: 'etc-systemd-system-parsoid.service.j2', dest: '/etc/systemd/system/parsoid.service', mode: '0755' }
