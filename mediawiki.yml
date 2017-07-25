@@ -1,0 +1,16 @@
+# =============================================================================
+#
+# - Copyright (C) 2010-2016     George Li <yongxinl@outlook.com>
+#
+# - This is part of LiveCD remaster project.
+# - This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# =============================================================================
+
+---
+- hosts: build_local
+  gather_facts: no
+  roles:
+    - ../ansible-mediawiki

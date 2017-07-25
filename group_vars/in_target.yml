@@ -1,0 +1,41 @@
+# =============================================================================
+#
+# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
+#
+# - This is part of HomeVault imagebuilder project.
+# - This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# =============================================================================
+
+# Default group variables
+# =================
+
+# .. contents:: Sections
+#    :local:
+#
+
+# .. envvar:: target_host_name
+# .. envvar:: target_host_domain
+#
+# Specify hostname and domain that should be set in the target image.
+target_host_name: 'central'
+target_host_domain: 'lifamilyclub.com'
+
+# .. envvar:: target_root_password
+#
+# Specify root password
+target_root_password: 'secret'
+
+# .. envvar:: target_data_root
+#
+# Specify folder that will be use as root of user data directory
+target_data_root: '/yongxin'
+
+# .. envvar:: target_appdata_root
+#
+# Specify folder that will be use as new location of application data files
+# in case if you want to collect all appdata files in one
+target_appdata_root: '{{ target_data_root }}/private/var'
+
