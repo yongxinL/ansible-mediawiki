@@ -31,9 +31,6 @@ $wgScriptPath = "/w";
 $wgArticlePath = "/wiki/$1";
 $wgUsePathInfo = true;
 
-# was removed when MediaWiki >= 1.25
-;$wgScriptExtension = ".php";
-
 ## The protocol and server name to use in fully-qualified URLs
 $wgServer = "http://{{ mediawiki_server }}";
 
@@ -49,8 +46,8 @@ $wgLogo = "{{ mediawiki_logo }}";
 $wgEnableEmail = true;
 $wgEnableUserEmail = true; # UPO
 
-$wgEmergencyContact = "postmaster@{{ target_host_domain }}";
-$wgPasswordSender = "postmaster@{{ target_host_domain }}";
+$wgEmergencyContact = "webmaster@{{ target_host_domain }}";
+$wgPasswordSender = "webmaster@{{ target_host_domain }}";
 
 $wgEnotifUserTalk = false; # UPO
 $wgEnotifWatchlist = false; # UPO
@@ -202,9 +199,9 @@ $wgUpgradeKey = "626ff68b75ed37e9";
 ## For attaching licensing metadata to pages, and displaying an
 #  appropriate copyright notice / icon. GNU Free Documentation
 #  License and Creative Commons licenses are supported so far.
-$wgRightsPage = "Family Club"; # Set to the title of a wiki page that describes your license/copyright
-$wgRightsUrl = "www.lifamilyclub.com";
-$wgRightsText = "Family Club";
+$wgRightsPage = "{{ mediawiki_sitename }}"; # Set to the title of a wiki page that describes your license/copyright
+$wgRightsUrl = "www.{{ target_host_domain }}";
+$wgRightsText = "{{ mediawiki_sitename }}";
 $wgRightsIcon = "$wgScriptPath/resources/assets/licenses/cc-by-nc-sa.png";
 
 ## Path to the GNU diff3 utility. Used for conflict resolution.
@@ -240,29 +237,6 @@ $wgVectorResponsive = true;
 wfLoadSkin( '{{ item.name }}' );
 {% else %}
 require_once "$IP/skins/{{ item.name }}/{{ item.name }}.php";
-{% endif %}
-{% if item.name == "foreground" %}
-$wgForegroundFeatures = array(
-    'showActionsForAnon' => false,
-    'NavWrapperType' => 'divonly',
-    'showHelpUnderTools' => false,
-    'showRecentChangesUnderTools' => true,
-    'enableTabs' => true,
-    'wikiName' => &$GLOBALS['wgSitename'],
-    'navbarIcon' => true,
-    'IeEdgeCode' => 1,
-    'showFooterIcons' => 1,
-    'addThisFollowPUBID' => ''
-);
-# disable Foundation grid on other skin
-#$wgSkipSkins = array(
-#    'vector'
-#);
-# using Foreground and VisualEditor
-$wgVisualEditorSupportedSkins = [
-    'foreground',
-    'vector'
-];
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -310,29 +284,12 @@ require_once "$IP/extensions/{{ item.name }}/{{ item.name }}.php";
 */
 #  these lines enable Flow on the "Talks"  namespaces, uncommit the line as need
 $wgNamespaceContentModels[NS_TALK] = 'flow-board';
-#$wgNamespaceContentModels[NS_PROJECT_TALK] = 'flow-board';
-#$wgNamespaceContentModels[NS_FILE_TALK] = 'flow-board';
-#$wgNamespaceContentModels[NS_MEDIAWIKI_TALK] = 'flow-board';
-#$wgNamespaceContentModels[NS_TEMPLATE_TALK] = 'flow-board';
-#$wgNamespaceContentModels[NS_CATEGORY_TALK] = 'flow-board';
+$wgNamespaceContentModels[NS_TEMPLATE_TALK] = 'flow-board';
+$wgNamespaceContentModels[NS_CATEGORY_TALK] = 'flow-board';
 {% endif %}
 {% endfor %}
 {% endif %}
 
-{% if mediawiki_Editor == "CKeditor" %}
-## Extension: WYSIWYG-editor
-wfLoadExtension( 'WYSIWYG' );
-# These are not compatible with WYSIWYG richeditor
-$wgFCKEditorExcludedNamespaces = array(
-        NS_MEDIAWIKI,
-        NS_MEDIAWIKI_TALK,
-        NS_MODULE,
-        NS_TALK,
-        NS_TEMPLATE,
-        NS_TEMPLATE_TALK
-);
-{% endif %}
-{% if mediawiki_Editor == "VisualEditor" %}
 ## Extension: VisualEditor
 wfLoadExtension( 'VisualEditor' );
 
@@ -360,6 +317,11 @@ $wgVisualEditorAvailableNamespaces = [
     "_merge_strategy" => "array_plus"
 ];
 
+# List skins that supported VE
+$wgVisualEditorSupportedSkins = [
+  'vector'
+];
+
 # Linking with Parsoid
 $wgVirtualRestConfig['modules']['parsoid'] = array(
   # URL to the Parsoid instance
@@ -374,8 +336,6 @@ $wgVirtualRestConfig['modules']['parsoid'] = array(
 // will cause deadlocks (connection timeouts from Parsoid) when trying to use this feature.
 $wgSessionsInObjectCache = true;
 
-{% endif %}
-
 ## Extension: WikiEditor
 # Enables use of WikiEditor by default but still allows users to disable it in preferences
 $wgDefaultUserOptions['usebetatoolbar'] = 1;
@@ -385,19 +345,6 @@ $wgDefaultUserOptions['usebetatoolbar-cgd'] = 1;
 $wgDefaultUserOptions['wikieditor-preview'] = 0;
 # Displays the Publish and Cancel buttons on the top right side
 $wgDefaultUserOptions['wikieditor-publish'] = 0;
-
-## Extension: Bootstrap
-#  uncomment below line to enable bootstrap styles on all pages
-#$wgHooks['SetupAfterCache'][]=function(){
-#	\Bootstrap\BootstrapManager::getInstance()->addAllBootstrapModules();
-#	return true;
-#};
-
-#$wgHooks['ParserAfterParse'][]=function( Parser &$parser, &$text, StripState &$stripState ){
-#	$parser->getOutput()->addModuleStyles( 'ext.bootstrap.styles' );
-#	$parser->getOutput()->addModuleScripts( 'ext.bootstrap.scripts' );
-#	return true;
-#};
 
 ## Extension: CodeEditor
 #  Enable the CodeEditor on JavaScript and CSS pages
@@ -422,30 +369,9 @@ $wgCaptchaTriggers['badlogin']      = true;
 #  Enable MobileFrontend
 $wgMFAutodetectMobileView = true;
 
-## Extension: RelatedArticles
-#  show related article at the bottom of the page
-$wgRelatedArticlesShowReadMore = true;
-$wgRelatedArticlesShowInFooter = true;
-
 ## Extension: Scribunto
 #  Enable Scribunto extension and set to use lua standalone engine
 $wgScribuntoDefaultEngine = 'luastandalone';
-
-## Extension: PageImages
-#  Blacklisted images will never be selected as page images
-$wgPageImagesBlacklist = array(
-  // Page on local wiki
-  array(
-    'type' => 'db',
-    'page' => 'MediaWiki:Pageimages-blacklist',
-    'db' => false,
-  ),
-  // Page on Commons, for third-party sites using our web API
-  array(
-    'type' => 'url',
-    'url' => 'http://commons.wikimedia.org/w/index.php?title=somepage&action=raw',
-  ),
-);
 
 ## Extension: TextExtracts
 #  <tag> will be excluded from extraction
@@ -479,12 +405,7 @@ $wgGroupPermissions['sysop']['suppressionlog'] = true;    // allow Sysop to hide
 
 ## Enables CirrusSearch and ElasticSearch in Wiki
 ## Installation:
-## MediaWiki >= 1.26 --> ElasticSearch 1.7
-## MediaWiki >= 1.28 --> ElasticSearch 2.x
-## MediaWiki >= 1.29 and up --> ElasticSearch 5.x
-## 1. pull ElasticSearch 1.7 image
-##    docker pull elasticsearch:1.7-alpine
-##    or pull ElasticSearch 2.x
+## 1. pull ElasticSearch 1.7/2.x/5.x image
 ##    docker pull elasticsearch:2-alpine
 #
 ## 2. run ElasticSearch with default
