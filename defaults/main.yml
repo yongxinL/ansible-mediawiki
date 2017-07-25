@@ -25,7 +25,7 @@ install_role_name: 'mediawiki'
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
-mediawiki_version: 'REL1_28'
+mediawiki_version: 'REL1_29'
 
 # .. envvar:: target_host_domain
 #
