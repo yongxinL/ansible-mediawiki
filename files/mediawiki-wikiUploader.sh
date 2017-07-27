@@ -150,6 +150,18 @@ category_Level1="Buildings:Architecture/Buildings/General \
 				Records:Medical/Medical_History_&_Records \
 				Pharmacy:Medical/Pharmacy \
 				Reference:Medical/Reference \
+				Children:Music/Genres_&_Styles/Children \
+				Classical:Music/Genres_&_Styles/Classical \
+				Dance:Music/Genres_&_Styles/Dance \
+				Electronic:Music/Genres_&_Styles/Electronic \
+				Heavy:Music/Genres_&_Styles/Heavy_Metal \
+				Jazz:Music/Genres_&_Styles/Jazz \
+				Musicals:Music/Genres_&_Styles/Musicals \
+				New:Music/Genres_&_Styles/New_Age \
+				Opera:Music/Genres_&_Styles/Opera \
+				Pop:Music/Genres_&_Styles/Pop_Vocal \
+				Rap:Music/Genres_&_Styles/Rap_&_Hip_Hop \
+				Rock:Music/Genres_&_Styles/Rock \
 				Lyrics:Music/Lyrics \
 				Piano:Music/Musical_Instruments/Piano_&_Keyboard \
 				Keyboard:Music/Musical_Instruments/Piano_&_Keyboard \
@@ -219,7 +231,7 @@ category_Level1="Buildings:Architecture/Buildings/General \
 category_unknown="uncategory"
 
 # define supported file type
-supported_FileType="gif|jpg|pdf|png|mov|mp4"
+supported_FileType="gif|jpg|pdf|png|mov|mp3|mp4"
 # define keyword for position skip
 keyword_skipped="xxx|skip"
 # comment will use when importing file
