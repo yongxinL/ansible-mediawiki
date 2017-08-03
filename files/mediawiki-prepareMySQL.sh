@@ -1,8 +1,10 @@
 #!/bin/bash
 # =============================================================================
 #
-# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
-# - ver: 1.0
+# - Copyright (C) 2017     George Li <yongxinl@outlook.com>
+# - ver: 1.0.1
+#
+# - This is part of Family journal Wiki project.
 #
 # - you can execute this script every minute by cron in Linux,
 #   add following line by executing command: crontab -e
@@ -21,41 +23,42 @@
 set -e
 
 ## Vars ----------------------------------------------------------------------
-_self_root="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )";
-
-# enable debug
-debug_mode=${DEBUG:-off};
+# declare version
+script_version="1.0.1"
+script_path="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )"
+script_usage="Usage: $0"
 
 ## Functions -----------------------------------------------------------------
-info_block "checking for required libraries." 2> /dev/null ||
-    source "${_self_root}/scripts_library.sh";
+print_info "*** Checking for required libraries." 2> /dev/null ||
+    source "${script_path}/functions.dash";
 
 ## Main ----------------------------------------------------------------------
-if [ ! -f "${_self_root}/LocalSettings.php" ]; then
-    exit_fail "WARNING: Please run this script from MediaWiki root directory!"
+if [ ! -f "${script_path}/LocalSettings.php" ]; then
+    exit_fail "Please run this script in MediaWiki root directory! "
 fi
 
-wgDBname=$(sed -n 's/^$wgDBname = "\([^"]*\)";/\1/p' ${_self_root}/LocalSettings.php)
-wgDBuser=$(sed -n 's/^$wgDBuser = "\([^"]*\)";/\1/p' ${_self_root}/LocalSettings.php)
-wgDBpasswd=$(sed -n 's/^$wgDBpassword = "\([^"]*\)";/\1/p' ${_self_root}/LocalSettings.php)
+# retrieve DB user/password
+db_name=$(sed -n 's/^$wgDBname = "\([^"]*\)";/\1/p' ${script_path}/LocalSettings.php)
+db_user=$(sed -n 's/^$wgDBuser = "\([^"]*\)";/\1/p' ${script_path}/LocalSettings.php)
+db_pass=$(sed -n 's/^$wgDBpassword = "\([^"]*\)";/\1/p' ${script_path}/LocalSettings.php)
 
-echo " To create a sqldump, please use below command: "
-echo " mysqldump -h localhost -u root -p ${wgDBname} > ${_self_root}/dbs/wikidb_dump_$(date '+%Y%m%d').sql"
+print_info "You should need below command to create the database dump.
+mysqldump -h localhost -u root -p ${db_name} > ${script_path}/dbs/wikidb_dump_$(date '+%Y%m%d').sql"
 
 read -p "Are you sure you want to continue? <y/N> " prompt
 if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]]; then
 
     echo "Please enter root user MySQL password!"
     read rootpasswd
-    log_info "Create user and database ..."
+    print_info "Create user and database ..."
     mysql -uroot -p${rootpasswd} -e "CREATE DATABASE ${wgDBname} /*\!40100 DEFAULT CHARACTER SET utf8 */;"
     mysql -uroot -p${rootpasswd} -e "CREATE USER ${wgDBuser}@localhost IDENTIFIED BY '${wgDBpasswd}';"
     mysql -uroot -p${rootpasswd} -e "GRANT ALL PRIVILEGES ON ${wgDBname}.* TO '${wgDBuser}'@'localhost';"
     mysql -uroot -p${rootpasswd} -e "FLUSH PRIVILEGES;"
     if [ -f "${_self_root}/dbs/wikidb_dump.sql" ]; then
-        log_info "import database backup ..."
-        mysql -uroot -p${rootpasswd} ${wgDBname} < dbs/wikidb_dump.sql
-        php ${_self_root}/maintenance/update.php --quick
+        print_info "import database backup ..."
+        mysql -uroot -p${rootpasswd} ${db_name} < dbs/wikidb_dump.sql
+        php ${script_path}/maintenance/update.php --quick
     fi
 
 fi

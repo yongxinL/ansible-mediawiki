@@ -2,9 +2,9 @@
 # =============================================================================
 #
 # - Copyright (C) 2017     George Li <yongxinl@outlook.com>
-# - ver: 1.1
+# - ver: 1.0.1
 #
-# - This is part of HomeVault imagebuilder project.
+# - This is part of Family journal Wiki project.
 #
 # - you can execute this script every minute by cron in Linux,
 #   add following line by executing command: crontab -e
@@ -23,9 +23,28 @@
 set -e
 
 ## Vars ----------------------------------------------------------------------
+# declare version
+script_version="1.0.1"
+script_path="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )"
+script_usage="Usage: $0 <directory>
+This tools will load the supported media files from <directory>,  and import into MediaWiki 
+with specified category and information based on the name of files. and the following media file
+can be supported in MediaWiki:
+    *${supported_FileType}
+
+The filename in format:
+	* timestamp-category-subcategory-author-description-extrainfo-extrainfo-000001.PNG
+- timestamp can be optional but the current date will be use.
+- category and subcategory will be filled up only when predefined categories be found.
+- subcategory can be optional
+- unkonwn category will be assign to category:${unknown_category}.
+- category will be classified as category/subcategory
+- author and description will be classified as article in format [author] and [author/description]
+- extrainfo is optional but will be classified as article in format [extrainfo] when provided
+"
 
 # define category and keyword, split by : and space between the category
-category_Level0="arc:Architecture/General \
+category_level0="arc:Architecture/General \
 				art:Art/General \
 				bio:Biography_&_Autobiography/General \
 				occ:Body_&_Mind_&_Spirit/General \
@@ -56,7 +75,7 @@ category_Level0="arc:Architecture/General \
 				tec:Technology_&_Engineering/General \
 				trv:Travel/General \
 				";
-category_Level1="Buildings:Architecture/Buildings/General \
+category_level1="Buildings:Architecture/Buildings/General \
 				Design:Architecture/Design \
 				Interior:Architecture/Interior_Design/General \
 				Landscape:Architecture/Landscape \
@@ -150,18 +169,6 @@ category_Level1="Buildings:Architecture/Buildings/General \
 				Records:Medical/Medical_History_&_Records \
 				Pharmacy:Medical/Pharmacy \
 				Reference:Medical/Reference \
-				Children:Music/Genres_&_Styles/Children \
-				Classical:Music/Genres_&_Styles/Classical \
-				Dance:Music/Genres_&_Styles/Dance \
-				Electronic:Music/Genres_&_Styles/Electronic \
-				Heavy:Music/Genres_&_Styles/Heavy_Metal \
-				Jazz:Music/Genres_&_Styles/Jazz \
-				Musicals:Music/Genres_&_Styles/Musicals \
-				New:Music/Genres_&_Styles/New_Age \
-				Opera:Music/Genres_&_Styles/Opera \
-				Pop:Music/Genres_&_Styles/Pop_Vocal \
-				Rap:Music/Genres_&_Styles/Rap_&_Hip_Hop \
-				Rock:Music/Genres_&_Styles/Rock \
 				Lyrics:Music/Lyrics \
 				Piano:Music/Musical_Instruments/Piano_&_Keyboard \
 				Keyboard:Music/Musical_Instruments/Piano_&_Keyboard \
@@ -231,127 +238,61 @@ category_Level1="Buildings:Architecture/Buildings/General \
 category_unknown="uncategory"
 
 # define supported file type
-supported_FileType="gif|jpg|pdf|png|mov|mp3|mp4"
+supported_filetype="gif|jpg|pdf|png|mov|mp4"
+
 # define keyword for position skip
 keyword_skipped="xxx|skip"
-# comment will use when importing file
-str_Comment="";
-# temporary working directory
-sourcedir="";
-logfile="/var/log/wikiUploader.log"
-workdir="/tmp/upload$$";
-pidfile="/var/run/wikiUploader.pid";
 
-_self_root="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )";
-_self_usage="Usage: $0 <directory>
-This tools will load the supported media files from <directory>,  and import into MediaWiki 
-with specified category and information based on the name of files. and the following media file
-can be supported in MediaWiki:
-    *${supported_FileType}
+# working directory
+work_dir="/tmp/upload$$"
 
-The filename in format:
-	* timestamp-category-subcategory-author-description-extrainfo-extrainfo-000001.PNG
-- timestamp can be optional but the current date will be use.
-- category and subcategory will be filled up only when predefined categories be found.
-- subcategory can be optional
-- unkonwn category will be assign to category:${unknown_category}.
-- category will be classified as category/subcategory
-- author and description will be classified as article in format [author] and [author/description]
-- extrainfo is optional but will be classified as article in format [extrainfo] when provided
-"
+# pid file
+pid_file="/var/run/${script_name}.pid"
 
 ## Functions -----------------------------------------------------------------
-function get_FileType() {
+print_info "*** Checking for required libraries." 2> /dev/null ||
+    source "${script_path}/functions.dash";
 
-	local strText="$(remove_whitespace $1)";
-
-	# remove last slash if exist
-	strText=${strText##*/};
-	# get text after splitter [.]
-	 strText=${strText##*.};
-	 # return text in lowercase
-	echo ${strText,,};
+# return category name
+# arc:Architecture/General to Architecture/General
+function get_category_name() {
+	local name
+	name="$(trim $1)"
+	echo -n "${name##*:}"
 }
 
-function get_FileName() {
-
-	local strText="$(remove_whitespace $1)";
-
-	# remove last slash if exist
-	strText=${strText##*/};
-	# get text before splitter [.]
-	strText=${strText%%.*};
-	# return
-	echo ${strText};
+# return category keycode
+function get_category_keycode() {
+	local name
+	name="$(trim $1)"
+	echo -n "${name%%:*}"
 }
 
-function get_categoryCode() {
-
-	local strText="$(remove_whitespace $1)";
-
-	# get category code
-	strText=${strText%%:*};
-	# return text in lowercase
-	echo ${strText,,};
+# return category root name
+# Buildings:Architecture/Buildings/General to Architecture
+function get_category_root() {
+	local name
+	name=$(get_category_name $1)
+	echo -n ${name%%/*}
 }
 
-function get_categoryKeyName() {
-
-	local strText="$(remove_whitespace $1)";
-
-	# get category keyword (first name)
-	strText=${strText##*:};
-	strText=${strText%%/*};
-	strText=${strText%%_*};
-	# return text in lowercase
-	echo ${strText,,};
-}
-
-function get_categoryName() {
-
-	local strText="$(remove_whitespace $1)";
-
-	# get category keyword (first name)
-	strText=${strText##*:};
-	strText=${strText%%/*};
-	# return text
-	echo ${strText};
-}
-
-function get_subCategoryHash() {
-
-	local strCategoryKey="$(remove_whitespace $1)";
-	local strText="";
-	local arrayT="";
-
-	for strText in ${category_Level1[@]}
+# return sub category in given category
+function get_subcategory_array() {
+	local category_key category subcategory
+	category_key="$(trim $1)"
+	for category in ${category_level1[@]};
 	do
-		if [[ $(get_categoryName ${strText}) == ${strCategoryKey} ]]; then
-			arrayT=("${strText}" "${arrayT[@]}");
+		if [ "$(get_category_name ${category})" == "${category_key}" ]; then
+			subcategory=("${subcategory[@]}" "${category}")
 		fi
 	done
-
-	# return array
-	echo "${arrayT[@]}";
+	echo -n "${subcategory[@]}"
 }
 
-function remove_whitespace() {
-
-	local strText="$1";
-
-	# remove leading whitespace characters
-	strText=${strText#${strText%%[![:space:]]*}};
-	# remove trailing whitespace characters
-	strText=${strText%${strText##*[![:space:]]}};	
-	# return
-	echo ${strText}
-}
-
-function get_reformat() {
-
-	local strText="$(remove_whitespace $1)";
-
-	# the text will be:
+# return text in specify format
+function reformat() {
+	local text="$(trim $1)"
+	# the text will be convert as
 	# 1. caption
 	# 2. uppercase the first characters after _
 	# 3. remove _ from string
@@ -359,200 +300,158 @@ function get_reformat() {
 	#    change [sed 's/\([A-Z]\)/ \1/g'] will result to [DrawAPicture => Draw A Picture]
 	# 5. remove space in the beginner
 	# 6. replace the space with _
-	strText=$(echo ${strText^} | sed -e 's/_./\U&/g' | sed 's/_//g' | sed 's/\([A-Z][^ ]\)/ \1/g' | sed 's/^[ \t]*//g' | sed 's/ /_/g' );
-	# return text
-	echo ${strText};
+	echo $(echo ${text^} | sed -e 's/_./\U&/g' | sed 's/_//g' | sed 's/\([A-Z][^ ]\)/ \1/g' | sed 's/^[ \t]*//g' | sed 's/ /_/g' )
 }
 
-function get_comment() {
+# return wiki comment in given filename
+function wiki_comment() {
+	local file filename category level0 level1 keycode name offset comment
+	file="$(get_filename $1)"
+	comment=\'
+	offset=0
 
-	local strFileName="$(get_FileName $1)";
-	local strFiletype="$(get_FileType $1)";
+	# analyze file
+	IFS='-' read -ra filename <<< "${file}"
 
-	local strCategory="";
-	local strComment=\';
-	local strLevel0="";
-	local strLevel1="";
-	local offset=0;
-
-	# check if the media is support type.
-	if [[ ${strFiletype} =~ ^(${supported_FileType}) ]]; then
-
-		# analyze FileName
-		IFS='-' read -ra arrayX <<< "${strFileName}"
-
-		# analyze date info from arrayX [0]
-		if [[ ! ${arrayX[0]} =~ ^[^0-9]+ ]]; then
-			# use date from the FileName
-			strLevel0=$(date --date="${arrayX[0]}" +'%Y');
-			strLevel1=$(date --date="${arrayX[0]}" +'%Y0%m');
-			strComment+="[[Category:"${strLevel0}"/"${strLevel1}"]]";
+	# retrieve date from filename[0]
+	if [[ ! ${filename[0]} =~ ^[^0-9]+ ]]; then
+		# check if date can be convert
+		if date --date="${filename[0]}" +"%Y" 2> /dev/null; then
+			comment+="[[Category:"$(date --date="${filename[0]}" +"%Y")"/"$(date --date="${filename[0]}" +"%Y%m")"]]"
 		else
-			# use current date as date
-			strLevel0=$(date +'%Y');
-			strLevel1=$(date +'%Y0%m');
-			strComment+="[[Category:"${strLevel0}"/"${strLevel1}"]]";
-			# add dummy date into to arrayX[0]
-			arrayX=("dummy" "${arrayX[@]}");
-		fi
-
-		# analyze category info from arrayX [1,2]
-		for strLevel0 in ${category_Level0}
-		do
-
-			if [[ ${arrayX[1],,} == $(get_categoryCode ${strLevel0}) || ${arrayX[1],,} == $(get_categoryKeyName ${strLevel0}) ]]; then
-
-				# assign level 0 category
-				strCategory=$(get_categoryName ${strLevel0});
-
-				# analyze 2nd level of category with arrayX [2]
-				for strLevel1 in $(get_subCategoryHash ${strCategory})
-				do
-					if [[ ${arrayX[2],,} == $(get_categoryCode ${strLevel1}) ]]; then
-						strCategory=${strLevel1##*:};
-					fi
-				done
-
-				# check if category has be set to subcategory
-				if [[ ${strCategory} == $(get_categoryName ${strLevel0}) ]]; then
-					offset=1;
-				fi
-			fi
-		done
-
-		# assign category
-		if [[ ${strCategory} != "" ]]; then
-			strComment+="[[Category:"${strCategory}"]]";
-		else
-			strComment+="[[Category:"${category_unknown}"]]";
-			offset=2;
-		fi
-
-		# analyze author/location info from arrayX [3]
-		if [[ ${arrayX[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${arrayX[3-${offset}]} =~ ^(${keyword_skipped}) ]]; then
-			strLevel0=$(get_reformat ${arrayX[3-${offset}]});
-			strComment+="[["${strLevel0}"]]";
-		else
-			strLevel0="";
-		fi
-
-		# analyze description/sublocation info from arrayX [4]
-		if [[ ${arrayX[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${arrayX[4-${offset}]} =~ ^(${keyword_skipped}) ]]; then
-			strLevel1=$(get_reformat ${arrayX[4-${offset}]});
-
-			if [[ ${strLevel0} != "" ]]; then
-				strComment+="[["${strLevel0}"/"${strLevel1}"]]";
-			else
-				strComment+="[["${strLevel1}"]]";
-			fi
-		fi
-
-		# analyze extra info from arrayX [5-end]
-		int_start=$(expr 5 - ${offset});
-		int_end=${#arrayX[@]};
-
-		if [ ${int_end} -gt ${int_start} ]; then
-			for iCount in $(eval echo "{$int_start..$int_end}");
-			do
-				if [[ ${arrayX[${iCount}]} =~ ^[^0-9]+ ]] && [[ ! ${arrayX[${iCount}]} =~ ^(${keyword_skipped}) ]]; then
-					#strLevel0=$(get_reformat ${arrayX[${iCount}]});
-					strComment+="[["$(get_reformat ${arrayX[${iCount}]})"]]";
-				fi
-			done
+			comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y%m")"]]"
 		fi
 	else
-		echo "${1} will skipped due to unsupported media type!"
+		comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y%m")"]]"
+		filename=("xxxx" "${filename[@]}")
+	fi
+
+	# retrieve category and subcategory from filename[1,2]
+	for level0 in ${category_level0};
+	do
+		keycode=$(lowercase $(get_category_keycode ${level0}))
+		name=$(lowercase $(get_category_name ${level0}))
+
+		# analyze filename[1] and get root category
+		if [ ${filename[1],,} == ${keycode} ] || [ ${filename[1],,} == ${name} ]; then
+
+			# assign to root category
+			category=$(get_category_name ${level0})
+			# analyze filename[2] and get subcategory
+			for level1 in $(get_subcategory_array $(get_category_root ${category}));
+			do
+				keycode=$(lowercase $(get_category_keycode ${level1}))
+
+				if [ ${filename[2],,} == ${keycode} ]; then
+					category=$(get_category_name ${level1})
+				fi
+			done
+			# update offset when subcategory is not identified
+			if [ ${category} == $(get_category_name ${level0}) ]; then
+				offset=1
+			fi
+		fi
+	done
+
+	if [ ${#category[@]} -gt 0 ]; then
+		comment+="[[Category:"${category}"]]"
+	else
+		comment+="[[Category:"${category_unknown}"]]"
+	fi
+
+	# retrieve author/location from filename[3]
+	if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]]; then
+		level0=$(reformat ${filename[3-${offset}]})
+		comment+="[["${level0}"]]"
+	else
+		level0="";
+	fi
+
+	# retrieve description/sublocation from filename[4]
+	if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]]; then
+		level1=$(reformat ${filename[4-${offset}]})
+		if [ ${level0} != "" ]; then
+			comment+="[["${level0}"/"${level1}"]]"
+		else
+			comment+="[["${level1}"]]"
+		fi
+	fi
+
+	# retrieve additional from the rest
+	start=$(( 5 - ${offset} ))
+	end=${#filename[@]}
+
+	if [ $end -gt $start ]; then
+		for i in $(eval echo "{$start..$end}");
+		do
+			if [[ ${filename[${i}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skipped}) ]]; then
+				comment+="[["$(reformat ${filename[${i}]})"]]"
+			fi
+		done
 	fi
 
 	# end of comment
-	strComment+=\';
-	# return comment
-	echo ${strComment}
+	comment+=\'
+	echo -n ${comment}
 }
 
 ## Main ----------------------------------------------------------------------
-# directory check and script usage
-if [[ -z "${1}" ]] || [[ ! -d "${1}" ]]; then
-	echo "WARNING: please provide full directory name that contains media files!"
-	echo ""
-	echo "${_self_usage}";
-	exit 0
+media_dir="${1%/}"
+
+if [ -z "$media_dir" ] || [ ! -d "${media_dir}" ]; then
+	exit_fail "Please provide directory that contains supported media file! "
 fi
 
-# environment check
-if [[ ! -f "${_self_root}/LocalSettings.php" ]] || [[ ! -f "${_self_root}/maintenance/importImages.php" ]]; then
-	echo "WARNING: Please put this script in root of MediaWiki directory!";
-	exit 0;
-fi
-if [[ -f "${pidfile}" ]]; then
-	echo "WARNING: it's running by other user, please check the process or delete the ${pidfile} file!";
-	exit 0;
+if [ ! -f "${script_path}/LocalSettings.php" ] || [ ! -f "${script_path}/maintenance/importImages.php" ]; then
+	exit_fail "Please run this script in MediaWiki root directory! "
 fi
 
-# media file check
-sourcedir="${1%/}"
-arrayP=$(find ${sourcedir}/ -maxdepth 2 -type f -not -path '*/\.*')
+if [ -f "${pid_file}" ]; then
+	exit_fail "Please wait as other user is importing the media files!"
+fi
 
-for str_File in ${arrayP[@]};
+# checking files in given directory
+array_all=$(find ${media_dir}/ -maxdepth 2 -type f -not -path '*/\.*')
+for file in ${array_all[@]};
 do
-	if [[ $(get_FileType ${str_File}) =~ ^(${supported_FileType}) ]]; then
-		arrayF=("${str_File}" "${arrayF[@]}");
+	if [[ $(lowercase $(get_filetype ${file})) =~ ^(${supported_filetype}) ]]; then
+		array_files=("${file}" "${array_files[@]}")
 	fi
 done
 
-# release arrayP
-unset arrayP;
+unset array_all;
 
-if [[ -z ${arrayF} ]]; then
-	echo "WARNING: the directory ${1} does not contain supported media files!"
-	echo ""
-	echo "${_self_usage}";
-	exit 0
+if [ -${#array_files[@]} -eq 0 ]; then
+	exit_fail "The directory ${media_dir} does not contains supported file!"
 fi
 
-# create temporary directory and pidfile
-mkdir -p "${workdir}";
-touch "${pidfile}";
-if [ ! -f "${logfile}" ]; then
-	touch "${logfile}"
-fi
+exec_command "*** Creating temporary directory and pid_file ..." \
+	mkdir -p "${work_dir}"; \
+	touch ${pid_file};
 
-# processing media file in directory
-for str_File in ${arrayF[@]};
+# process the file and upload into mediaWiki.
+for file in ${array_files[@]};
 do
-	echo -n "[$(date +"%Y-%m-%d %H:%M:%S %Z")] Starting process file: $(get_FileName ${str_File}).$(get_FileType ${str_File}) ... "
+	exec_command "*** process and upload file $(basename ${file}) ..." \
+		cp "${file}" "${work_dir}/$(get_filename ${str_File}).$(get_filetype ${str_File})"
+		php ${script_path}/maintenance/importImages.php ${work_dir} --comment=$(wiki_comment ${file}) >> ${log_file};
 
-	# copy file to $workdir with lowercase of file extension
-	cp "${str_File}" "${workdir}/$(get_FileName ${str_File}).$(get_FileType ${str_File})"
-	# retrive the file comment
-	str_Comment=$(get_comment ${str_File})
-	# output debug information
-	echo "[$(date +"%Y-%m-%d %H:%M:%S %Z")] processing file:-${str_File}" >> ${logfile};
-	echo "                           description:${str_Comment}" >> ${logfile};
-	# use wiki command to load file
-	php ${_self_root}/maintenance/importImages.php ${workdir} --comment=${str_Comment} >> ${logfile};
-	# verify command result
 	if [ $? -ne 0 ]; then
-		echo "failed";
-		echo "WARNING: error when loading file ${str_File}";
-		rm -f ${pidfile};
-		exit $?
+		rm -f ${pid_file}
+		exit_fail "error when importing file ${file}!"
 	else
-		# remove file from sourcedir and clear up the workdir
-		rm -f "${str_File}";
-		rm -f ${workdir}/*;
-		echo "OK"
+		# remove file from both of media and work directory
+		rm -f ${file}
+		rm -f ${work_dir}/*
 	fi
 done
 
-# remove pidfile and workdir once the script is finish
-rm -f ${pidfile};
-rm -rf ${workdir};
+# rebuildfileCache.php will use when FileCache option is enable.
+exec_command "*** rebuild wiki media meta data ..." \
+	php ${script_path}/maintenance/rebuildImages.php >> ${log_file}; \
+	php ${script_path}/maintenance/rebuildFileCache.php >> ${log_file};
 
-# rebuild wiki meta information
-php ${_self_root}/maintenance/rebuildImages.php >> ${logfile};
-
-# uncommit below if wiki FileCache is enabled
-php ${_self_root}/maintenance/rebuildFileCache.php >> ${logfile};
-
-echo "All files in ${sourcedir} have be imported successfully!"
+# remove pid_file and work_dir before closing
+rm -f ${pid_file}
+rm -rf ${work_dir}
+exit_success

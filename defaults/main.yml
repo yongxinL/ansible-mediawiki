@@ -137,7 +137,7 @@ mediawiki_core_extensions:
   - { name: 'Interwiki', type: 'wfload' }                 # adds the "Special:Interwiki" page to MediaWiki, to view and edit the interwiki table
   - { name: 'LocalisationUpdate', type: 'wfload' }        # allows to update the locations for MediaWiki message without upgrade the MediaWiki
   - { name: 'MobileFrontend', type: 'wfload' }            # provides a mobile-friendly view
-  - { name: 'MP3MediaHandler', type: 'wfload' }           # Adds a media player for mp3 files on the wiki
+  - { name: 'MP3MediaHandler', type: 'wfload' }           # adds a media player for mp3 files on the wiki
   - { name: 'MultimediaViewer', type: 'wfload' }          # provides a better experience to users when they click on thumbnails in a page
   - { name: 'ParserFunctions', type: 'wfload' }           # enhances parser with logical and string functions
   - { name: 'PdfHandler', type: 'wfload' }                # allows to handle PDF files
@@ -192,7 +192,7 @@ mediawiki_customization:
   - { name: 'mediawiki-searchEngine.sh', dest: '{{ mediawiki_root }}/searchEngine.sh', mode: '0755' }
   - { name: 'mediawiki-wikiUploader.sh', dest: '{{ mediawiki_root }}/wikiUploader.sh', mode: '0755' }
   - { name: 'mediawiki-prepareMySQL.sh', dest: '{{ mediawiki_root }}/prepareMySQL.sh', mode: '0755' }
-  - { name: 'mediawiki-scripts_library.sh', dest: '{{ mediawiki_root }}/scripts_library.sh' }
+  - { name: 'mediawiki-functions.dash', dest: '{{ mediawiki_root }}/functions.dash', mode: '0644' }
 
 # .. envvar:: mediawiki_configuration
 #
