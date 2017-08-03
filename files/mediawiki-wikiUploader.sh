@@ -26,6 +26,7 @@ set -e
 # declare version
 script_version="1.0.1"
 script_path="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )"
+script_name="$(basename $0)"
 script_usage="Usage: $0 <directory>
 This tools will load the supported media files from <directory>,  and import into MediaWiki 
 with specified category and information based on the name of files. and the following media file
@@ -279,10 +280,12 @@ function get_category_root() {
 # return sub category in given category
 function get_subcategory_array() {
 	local category_key category subcategory
-	category_key="$(trim $1)"
+
+	category_key="$(get_category_root $1)"
+
 	for category in ${category_level1[@]};
 	do
-		if [ "$(get_category_name ${category})" == "${category_key}" ]; then
+		if [ "$(get_category_root ${category})" == "${category_key}" ]; then
 			subcategory=("${subcategory[@]}" "${category}")
 		fi
 	done
@@ -316,13 +319,13 @@ function wiki_comment() {
 	# retrieve date from filename[0]
 	if [[ ! ${filename[0]} =~ ^[^0-9]+ ]]; then
 		# check if date can be convert
-		if date --date="${filename[0]}" +"%Y" 2> /dev/null; then
-			comment+="[[Category:"$(date --date="${filename[0]}" +"%Y")"/"$(date --date="${filename[0]}" +"%Y%m")"]]"
+		if date --date="${filename[0]}" +"%Y" > /dev/null; then
+			comment+="[[Category:"$(date --date="${filename[0]}" +"%Y")"/"$(date --date="${filename[0]}" +"%Y0%m")"]]"
 		else
-			comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y%m")"]]"
+			comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y0%m")"]]"
 		fi
 	else
-		comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y%m")"]]"
+		comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y0%m")"]]"
 		filename=("xxxx" "${filename[@]}")
 	fi
 
@@ -330,7 +333,7 @@ function wiki_comment() {
 	for level0 in ${category_level0};
 	do
 		keycode=$(lowercase $(get_category_keycode ${level0}))
-		name=$(lowercase $(get_category_name ${level0}))
+		name=$(lowercase $(get_category_root ${level0}))
 
 		# analyze filename[1] and get root category
 		if [ ${filename[1],,} == ${keycode} ] || [ ${filename[1],,} == ${name} ]; then
@@ -338,7 +341,7 @@ function wiki_comment() {
 			# assign to root category
 			category=$(get_category_name ${level0})
 			# analyze filename[2] and get subcategory
-			for level1 in $(get_subcategory_array $(get_category_root ${category}));
+			for level1 in $(get_subcategory_array ${category});
 			do
 				keycode=$(lowercase $(get_category_keycode ${level1}))
 
@@ -433,7 +436,7 @@ exec_command "*** Creating temporary directory and pid_file ..." \
 for file in ${array_files[@]};
 do
 	exec_command "*** process and upload file $(basename ${file}) ..." \
-		cp "${file}" "${work_dir}/$(get_filename ${str_File}).$(get_filetype ${str_File})"
+		cp "${file}" "${work_dir}/$(get_filename ${str_File}).$(get_filetype ${str_File})"; \
 		php ${script_path}/maintenance/importImages.php ${work_dir} --comment=$(wiki_comment ${file}) >> ${log_file};
 
 	if [ $? -ne 0 ]; then
