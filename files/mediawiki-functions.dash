@@ -214,8 +214,8 @@ function print_fail() {
 
 # function to print log to the screen
 function print_log() {
-	if [ ${#1} -gt 80 ]; then
-		printf "${__lib_color_info}%s %s-%s:%s${__lib_color_normal}"  "$(date -u +"${__lib_format_date_short}")" "$(get_filename ${script_name})"  "[INFO]"  "${1:0:80}..."
+	if [ ${#1} -gt 60 ]; then
+		printf "${__lib_color_info}%s %s-%s:%s${__lib_color_normal}"  "$(date -u +"${__lib_format_date_short}")" "$(get_filename ${script_name})"  "[INFO]"  "${1:0:60}..."
 	else
 		printf "${__lib_color_info}%s %s-%s:%s${__lib_color_normal}"  "$(date -u +"${__lib_format_date_short}")" "$(get_filename ${script_name})"  "[INFO]"  "${1}"
 	fi
