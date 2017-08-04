@@ -157,6 +157,7 @@
     group: root
     mode: "{{ item.mode|default('0644') }}"
     backup: no
+    force: yes
   with_items: "{{ mediawiki_customization }}"
 
 - name: Do {{ install_role_name }} maintenance after upgrading
