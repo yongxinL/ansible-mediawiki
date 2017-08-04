@@ -32,7 +32,7 @@ es_engine_url="http://${es_engine_host}:9200"
 
 ## Functions -----------------------------------------------------------------
 print_info "*** Checking for required libraries." 2> /dev/null ||
-    source "${script_path}/functions.dash";
+    source "${script_path}/functions.bash";
 
 function do_configure {
 

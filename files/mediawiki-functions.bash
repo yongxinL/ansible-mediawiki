@@ -15,7 +15,7 @@
 ## Vars ----------------------------------------------------------------------
 
 # declare version
-lib_version="1.0.1"
+lib_version="1.0.2"
 
 # reload script with bash
 if [ ! -n "${BASH_VERSION}" ]; then

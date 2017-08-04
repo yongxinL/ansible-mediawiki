@@ -30,7 +30,7 @@ script_usage="Usage: $0"
 
 ## Functions -----------------------------------------------------------------
 print_info "*** Checking for required libraries." 2> /dev/null ||
-    source "${script_path}/functions.dash";
+    source "${script_path}/functions.bash";
 
 ## Main ----------------------------------------------------------------------
 if [ ! -f "${script_path}/LocalSettings.php" ]; then
