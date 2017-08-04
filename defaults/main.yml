@@ -128,6 +128,7 @@ mediawiki_core_extensions:
   - { name: 'CiteThisPage', type: 'wfload' }              # adds a special page that provides different citation format
   - { name: 'CodeEditor', type: 'wfload' }                # provides a syntax-highlighting code editor for site
   - { name: 'ConfirmEdit', type: 'wfload' }               # adds CAPTCHAs for page savers and other user actions
+  - { name: 'CSS', type: 'require' }                      # a parser-function for adding CSS file, article or inline rules to articles
   - { name: 'Echo', type: 'require' }                     # provides an in-wiki notification system that can be used by other extensions
   - { name: 'Elastica', type: 'wfload' }                  # provides base ElasticSearch functionality
   - { name: 'EventLogging', type: 'require' }             # framework for logging analytic events
@@ -192,7 +193,7 @@ mediawiki_customization:
   - { name: 'mediawiki-searchEngine.sh', dest: '{{ mediawiki_root }}/searchEngine.sh', mode: '0755' }
   - { name: 'mediawiki-wikiUploader.sh', dest: '{{ mediawiki_root }}/wikiUploader.sh', mode: '0755' }
   - { name: 'mediawiki-prepareMySQL.sh', dest: '{{ mediawiki_root }}/prepareMySQL.sh', mode: '0755' }
-  - { name: 'mediawiki-functions.dash', dest: '{{ mediawiki_root }}/functions.dash', mode: '0644' }
+  - { name: 'mediawiki-functions.bash', dest: '{{ mediawiki_root }}/functions.bash', mode: '0644' }
 
 # .. envvar:: mediawiki_configuration
 #
