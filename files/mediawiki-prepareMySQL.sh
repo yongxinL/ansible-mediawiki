@@ -2,16 +2,6 @@
 # =============================================================================
 #
 # - Copyright (C) 2017     George Li <yongxinl@outlook.com>
-# - ver: 1.0.1
-#
-# - This is part of Family journal Wiki project.
-#
-# - you can execute this script every minute by cron in Linux,
-#   add following line by executing command: crontab -e
-#
-#   * * * * * {{ mediawiki_root }}/imagesUploader.sh /dataLibrary/imagesUpload >/dev/null
-#   or you can generate the crontab code by site
-#   http://www.openjs.com/scripts/jslibrary/demos/crontab.php
 #
 # - This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,18 +9,17 @@
 #
 # =============================================================================
 
-## Shell Opts ----------------------------------------------------------------
-set -e
+## Function Library ----------------------------------------------------------
+print_info "*** Checking for required libraries." 2> /dev/null ||
+    source "/etc/functions.bash";
 
 ## Vars ----------------------------------------------------------------------
 # declare version
-script_version="1.0.1"
+script_version="1.0.5"
 script_path="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )"
 script_usage="Usage: $0"
 
 ## Functions -----------------------------------------------------------------
-print_info "*** Checking for required libraries." 2> /dev/null ||
-    source "${script_path}/functions.bash";
 
 ## Main ----------------------------------------------------------------------
 if [ ! -f "${script_path}/LocalSettings.php" ]; then
