@@ -25,6 +25,11 @@ print_info "*** Checking for required libraries." 2> /dev/null ||
 ## Vars ----------------------------------------------------------------------
 # declare version
 script_version="1.0.5"
+
+# declare Logs, simple or verbose
+log_level=verbose
+log_file=/var/log/mediawiki.log
+
 script_usage="Usage: $0 <directory>
 This tools will load the supported media files from <directory>,  and import into MediaWiki 
 with specified category and information based on the name of files. and the following media file

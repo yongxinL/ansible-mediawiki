@@ -16,7 +16,11 @@ print_info "*** Checking for required libraries." 2> /dev/null ||
 ## Vars ----------------------------------------------------------------------
 # declare version
 script_version="1.0.5"
-script_path="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )"
+
+# declare Logs, simple or verbose
+log_level=verbose
+log_file=/var/log/mediawiki.log
+
 script_usage="Usage: $0"
 es_engine_host="localhost"
 es_engine_url="http://${es_engine_host}:9200"
@@ -32,7 +36,7 @@ function do_configure {
     read -p "Are you sure you want to continue? <y/N> " prompt
     if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]]; then
 
-        print_log "*** check if Search Engine is running on ${es_engine_host} ... "
+        print_info "*** check if Search Engine is running on ${es_engine_host} ... "
         response=$(curl --write-out %{http_code} --silent --output /dev/null $es_engine_url)
         if [ ! $response -eq 200 ]; then
             exit_fail "Elasticsearch Server ${es_engine_host} is not reachable !!!"
@@ -45,7 +49,7 @@ function do_configure {
 
         sleep 3
         exec_command "*** generating wiki indexes in the Search Engine ..." \
-            php ${script_path}/extensions/CirrusSearch/maintenance/updateSearchIndexConfig.php;
+            php ${script_path}/extensions/CirrusSearch/maintenance/updateSearchIndexConfig.php >> ${log_file};
 
         sleep 3
         exec_command "*** updating Wiki configuration file before bootstrap ... " \
@@ -53,8 +57,8 @@ function do_configure {
 
         sleep 3
         exec_command "*** bootstrap indexes in the Search Engine ..." \
-            php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipLinks --indexOnSkip; \
-            php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipParse;
+            php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipLinks --indexOnSkip >> ${log_file}; \
+            php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipParse >> ${log_file};
 
         sleep 3
         exec_command "*** updating Wiki configurate file to enable Search Engine ..." \
@@ -75,11 +79,11 @@ function do_reindex() {
 
     sleep 3
     exec_command "*** Force index all pages without links ..." \
-        php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --queue --maxJobs 10000 --pauseForJobs 1000 --skipLinks --indexOnSkip --buildChunks 250000; \
+        php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --queue --maxJobs 10000 --pauseForJobs 1000 --skipLinks --indexOnSkip --buildChunks 250000 >> ${log_file};
 
     sleep 3
     exec_command "*** Force index all pages without links ..." \
-    php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --queue --maxJobs 10000 --pauseForJobs 1000 --skipParse --buildChunks 250000;
+    php ${script_path}/extensions/CirrusSearch/maintenance/forceSearchIndex.php --queue --maxJobs 10000 --pauseForJobs 1000 --skipParse --buildChunks 250000 >> ${log_file};
 
     print_info "Wiki have be reindexed ... "
 }

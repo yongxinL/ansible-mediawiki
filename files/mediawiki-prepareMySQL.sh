@@ -16,8 +16,10 @@ print_info "*** Checking for required libraries." 2> /dev/null ||
 ## Vars ----------------------------------------------------------------------
 # declare version
 script_version="1.0.5"
-script_path="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )"
-script_usage="Usage: $0"
+
+# declare Logs, simple or verbose
+log_level=verbose
+log_file=/var/log/mediawiki.log
 
 ## Functions -----------------------------------------------------------------
 
