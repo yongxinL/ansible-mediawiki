@@ -20,7 +20,7 @@
 
 ## Function Library ----------------------------------------------------------
 print_info "*** Checking for required libraries." 2> /dev/null ||
-    source "/etc/functions.bash";
+    source "functions.bash";
 
 ## Vars ----------------------------------------------------------------------
 # declare version
