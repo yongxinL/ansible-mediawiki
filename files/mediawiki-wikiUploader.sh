@@ -27,7 +27,7 @@ print_info "*** Checking for required libraries." 2> /dev/null ||
 script_version="1.0.5"
 
 # declare Logs, simple or verbose
-log_level=verbose
+log_level=simple
 log_file=/var/log/mediawiki.log
 
 script_usage="Usage: $0 <directory>
@@ -188,6 +188,7 @@ category_level1="Buildings:Architecture/Buildings/General \
 				Trees:Nature/Plants/Trees \
 				Reference:Nature/Reference \
 				Reference:Photography/Reference \
+				General:Photography/Subjects_&_Themes/General \
 				Aerial:Photography/Subjects_&_Themes/Aerial \
 				Architectural:Photography/Subjects_&_Themes/Architectural_&_Industrial \
 				Celebration:Photography/Subjects_&_Themes/Celebrations_&_Events \
@@ -450,9 +451,12 @@ do
 done
 
 # rebuildfileCache.php will use when FileCache option is enable.
+# enable read permission for anonymous user and then disable
 exec_command "*** rebuild wiki media meta data ..." \
 	php ${script_path}/maintenance/rebuildImages.php >> ${log_file}; \
-	php ${script_path}/maintenance/rebuildFileCache.php >> ${log_file};
+	sed -i -r 's/^\$wgGroup(.*)read/\#$wgGroup\1read/' ${script_path}/LocalSettings.php; \
+	php ${script_path}/maintenance/rebuildFileCache.php >> ${log_file}; \
+	sed -i -r 's/^#\$wgGroup(.*)read/\$wgGroup\1read/' ${script_path}/LocalSettings.php;
 
 # remove pid_file and work_dir before closing
 rm -f ${pid_file}
