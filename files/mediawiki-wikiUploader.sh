@@ -18,14 +18,13 @@
 #
 # =============================================================================
 
-## Shell Opts ----------------------------------------------------------------
-set -e
+## Function Library ----------------------------------------------------------
+print_info "*** Checking for required libraries." 2> /dev/null ||
+    source "/etc/functions.bash";
 
 ## Vars ----------------------------------------------------------------------
 # declare version
-script_version="1.0.2"
-script_path="$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )"
-script_name="$(basename $0)"
+script_version="1.0.5"
 script_usage="Usage: $0 <directory>
 This tools will load the supported media files from <directory>,  and import into MediaWiki 
 with specified category and information based on the name of files. and the following media file
@@ -250,9 +249,6 @@ work_dir="/tmp/upload$$"
 pid_file="/var/run/${script_name}.pid"
 
 ## Functions -----------------------------------------------------------------
-print_info "*** Checking for required libraries." 2> /dev/null ||
-    source "${script_path}/functions.bash";
-
 # return category name
 # arc:Architecture/General to Architecture/General
 function get_category_name() {
@@ -413,15 +409,15 @@ if [ -f "${pid_file}" ]; then
 fi
 
 # checking files in given directory
-array_all=$(find ${media_dir}/ -maxdepth 2 -type f -not -path '*/\.*')
-for file in ${array_all[@]};
+array_files_all=$(find ${media_dir}/ -maxdepth 2 -type f -not -path '*/\.*')
+for file in ${array_files_all[@]};
 do
-	if [[ $(lowercase $(get_filetype ${file})) =~ ^(${supported_filetype}) ]]; then
+	if [[ $(get_filetype ${file,,}) =~ ^(${supported_filetype}) ]]; then
 		array_files=("${file}" "${array_files[@]}")
 	fi
 done
 
-unset array_all;
+unset array_files_all;
 
 if [ -${#array_files[@]} -eq 0 ]; then
 	exit_fail "The directory ${media_dir} does not contains supported file!"
@@ -435,7 +431,7 @@ exec_command "*** Creating temporary directory and pid_file ..." \
 for file in ${array_files[@]};
 do
 	exec_command "*** process and upload file $(basename ${file}) ..." \
-		cp "${file}" "${work_dir}/$(get_filename ${str_File}).$(get_filetype ${str_File})"; \
+		cp "${file}" "${work_dir}/$(get_filename ${file}).$(get_filetype ${file,,})"; \
 		php ${script_path}/maintenance/importImages.php ${work_dir} --comment=$(wiki_comment ${file}) >> ${log_file};
 
 	if [ $? -ne 0 ]; then
