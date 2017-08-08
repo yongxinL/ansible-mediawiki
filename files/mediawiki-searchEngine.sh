@@ -18,7 +18,7 @@ print_info "*** Checking for required libraries." 2> /dev/null ||
 script_version="1.0.5"
 
 # declare Logs, simple or verbose
-log_level=verbose
+log_level=simple
 log_file=/var/log/mediawiki.log
 
 script_usage="Usage: $0"
