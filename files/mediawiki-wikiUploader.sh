@@ -20,32 +20,15 @@
 
 ## Function Library ----------------------------------------------------------
 print_info "*** Checking for required libraries." 2> /dev/null ||
-    source "functions.bash";
+	source "$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )/functions.bash";
 
 ## Vars ----------------------------------------------------------------------
 # declare version
-script_version="1.0.5"
+script_version="1.0.10"
 
 # declare Logs, simple or verbose
-log_level=verbose
+log_level=simple
 log_file=/var/log/mediawiki.log
-
-script_usage="Usage: $0 <directory>
-This tools will load the supported media files from <directory>,  and import into MediaWiki 
-with specified category and information based on the name of files. and the following media file
-can be supported in MediaWiki:
-    *${supported_FileType}
-
-The filename in format:
-	* timestamp-category-subcategory-author-description-extrainfo-extrainfo-000001.PNG
-- timestamp can be optional but the current date will be use.
-- category and subcategory will be filled up only when predefined categories be found.
-- subcategory can be optional
-- unkonwn category will be assign to category:${unknown_category}.
-- category will be classified as category/subcategory
-- author and description will be classified as article in format [author] and [author/description]
-- extrainfo is optional but will be classified as article in format [extrainfo] when provided
-"
 
 # define category and keyword, split by : and space between the category
 category_level0="arc:Architecture/General \
@@ -73,6 +56,7 @@ category_level0="arc:Architecture/General \
 				pho:Photography/General \
 				pol:Political_Science/General \
 				ref:Reference/General \
+				sel:Self_Help/General \
 				sci:Science/General \
 				soc:Social_Science/General \
 				spo:Sports_&_Recreation/General \
@@ -188,9 +172,10 @@ category_level1="Buildings:Architecture/Buildings/General \
 				Trees:Nature/Plants/Trees \
 				Reference:Nature/Reference \
 				Reference:Photography/Reference \
+				General:Photography/Subjects_&_Themes/General \
 				Aerial:Photography/Subjects_&_Themes/Aerial \
 				Architectural:Photography/Subjects_&_Themes/Architectural_&_Industrial \
-				Celebration:Photography/Subjects_&_Themes/Celebrations_&_Events \
+				Celebrations:Photography/Subjects_&_Themes/Celebrations_&_Events \
 				Events:Photography/Subjects_&_Themes/Celebrations_&_Events \
 				Children:Photography/Subjects_&_Themes/Children \
 				Erotica:Photography/Subjects_&_Themes/Erotica \
@@ -218,7 +203,20 @@ category_level1="Buildings:Architecture/Buildings/General \
 				Reference:Political_Science/Reference \
 				Reference:Reference/Reference \
 				System:Reference/System_Media \
+				Aging:Self_Help/Aging \
 				Reference:Science/Reference \
+				Anxieties:Self_Help/Anxieties_&_Phobias \
+				Communication:Self_Help/Communication_&_Social_Skills \
+				Motivational:Self_Help/Motivational_&_Inspirational \
+				Happiness:Self_Help/Personal_Growth/Happiness \
+				Memory:Self_Help/Personal_Growth/Memory_Improvement \
+				Success:Self_Help/Personal_Growth/Success \
+				General:Self_Help/Self_Management/General \
+				Anger:Self_Help/Self_Management/Anger \
+				Stress:Self_Help/Self_Management/Stress \
+				Time:Self_Help/Self_Management/Time \
+				Culture:Social_Science/Popular_Culture \
+				Holidays:Social_Science/Holidays \
 				Reference:Social_Science/Reference \
 				Camping:Sports_&_Recreation/Camping \
 				Cycling:Sports_&_Recreation/Cycling \
@@ -244,8 +242,11 @@ category_unknown="uncategory"
 # define supported file type
 supported_filetype="gif|jpg|pdf|png|mov|mp4"
 
-# define keyword for position skip
-keyword_skipped="xxx|skip"
+# define keyword for skipping position
+keyword_skipped="xxx|skip|untitled"
+
+# define keyword for skipping rest of position
+keyword_skippall="skipall"
 
 # working directory
 work_dir="/tmp/upload$$"
@@ -253,7 +254,53 @@ work_dir="/tmp/upload$$"
 # pid file
 pid_file="/var/run/${script_name}.pid"
 
+# check if exiftool  (meta data) installed
+if [ $(command -v exiftool) ]; then
+	meta_query=$(which exiftool)
+fi
+
+# Geocoding provider
+geocoding_provider="maps.googleapis.com"
+geocoding_provider_format="xml"
+geocoding_provider_status=true
+geocoding_provider_status_checked=false
+geocoding_provider_url="https://${geocoding_provider}/maps/api/geocode/${geocoding_provider_format}?"
+geocoding_provider_key="AIzaSyBnRkU1Jk_0m8iADsgqWQANL4S7vnsVT4U"
+
 ## Functions -----------------------------------------------------------------
+# return script help
+show_usage() {
+	echo ""
+	echo "Usage: $0 <directory>"
+	echo "version: ${script_version}"
+	echo "	This tools will load the supported media files from <directory>,  and import into MediaWiki"
+	echo "	with specified category and information based on the name of files. and the following media file"
+	echo "	can be supported in MediaWiki:"
+	echo "		*${supported_FileType}"
+	echo ""
+	echo "	The filename in format:"
+	echo "		* timestamp-category-subcategory-author-description-extrainfo-extrainfo-001.PNG"
+	echo "	- timestamp can be optional but the current date will be use."
+	echo "	- category and subcategory will be filled up only when predefined categories be found."
+	echo "	- subcategory can be optional"
+	echo "	- unkonwn category will be assign to category:${unknown_category}."
+	echo "	- category will be classified as category/subcategory"
+	echo "	- author and description will be classified as article in format [author] and [author/description]"
+	echo "	- extrainfo is optional but will be classified as article in format [extrainfo] when provided"
+	echo ""
+}
+
+# return Geocoding provider status
+function geocoding_provider_status() {
+	if [ "${geocoding_provider_status_checked}" != true ]; then
+		# check network connectivity, return false if no internet access
+		if ! (curl --silent --head "https://${geocoding_provider}"  | egrep "20[0-9] Found|30[0-9] Found" >/dev/null) then
+			geocoding_provider_status=false
+		fi
+		geocoding_provider_status_checked=true
+	fi
+}
+
 # return category name
 # arc:Architecture/General to Architecture/General
 function get_category_name() {
@@ -292,6 +339,40 @@ function get_subcategory_array() {
 	echo -n "${subcategory[@]}"
 }
 
+# convert GPS coordinate from dms (Degrees Minutes Seconds) 
+# to DD (Decimal Degrees), for example:
+# 41 deg 26'35 to 41.443056
+# http://www.thelinuxrain.com/articles/dms-to-dd-to-kml-with-awk-and-sed
+# 1. retrieve coordinate in DMS (Degrees Minutes Seconds)
+# 2. combine direction letters (N,S,W,E) as a pair
+# 3. convert to DD (Decimal Degrees)
+function get_geocoding_in_dd() {
+	args_or_stdin $@ | sed 's/[^0-9NEWS.]/ /g' | sed 's/ \{1,\}/ /g' \
+		| awk '{print $0, substr($4,length($4),1)substr($8,length($8),1)}' \
+		| awk '{if ($9=="NE") {printf ("%.4f\t%.4f\n",$1+$2/60+$3/3600,$5+$6/60+$7/3600)} \
+		else if ($9=="NW") {printf ("%.4f\t%.4f\n",$1+$2/60+$3/3600,-($5+$6/60+$7/3600))} \
+		else if ($9=="SE") {printf ("%.4f\t%.4f\n",-($1+$2/60+$3/3600),$5+$6/60+$7/3600)} \
+		else if ($9=="SW") {printf ("%.4f\t%.4f\n",-($1+$2/60+$3/3600),-($5+$6/60+$7/3600))}}'
+}
+
+# Geocoding and return Location data
+function get_meta_geography_location() {
+	local geography_names=('city' 'state' 'country')
+	local ii gps_coordinate
+	for (( ii = 0; ii < ${#geography_names[@]}; ii++))
+	do
+		eval "${geography_names[ii]}=\$(${meta_query} -T -${geography_names[ii]} $1 | tr -d '[:space:]')" || exit_fail "Error during argument parsing." 1
+	done
+
+	if [ ${#city} -lt 2 ] || [ ${#state} -lt 2 ] || [ ${#country} -lt 2 ]; then
+		# retrieive GPS coordinates
+		gps_coordinate=$(get_geocoding_in_dd $(${meta_query} -T -GPSLatitude -GPSLongitude $1))
+		# todo reserve Geocoding base on GPS coordinates
+	else
+		echo "[[Category:$(reformat ${country})/$(reformat ${state})/$(reformat ${city})]]"
+	fi
+}
+
 # return text in specify format
 function reformat() {
 	local text="$(trim $1)"
@@ -309,12 +390,14 @@ function reformat() {
 # return wiki comment in given filename
 function wiki_comment() {
 	local file filename category level0 level1 keycode name offset comment
-	file="$(get_filename $1)"
+
+	file="$1"
 	comment=\'
 	offset=0
+	skip_after=0
 
 	# analyze file
-	IFS='-' read -ra filename <<< "${file}"
+	IFS='-' read -ra filename <<< "$(get_filename $1)"
 
 	# retrieve date from filename[0]
 	if [[ ! ${filename[0]} =~ ^[^0-9]+ ]]; then
@@ -356,39 +439,55 @@ function wiki_comment() {
 		fi
 	done
 
+	# retrieve location when in photography category
+	if [ "${filename[1],,}" == "pho" ] || [ "${filename[1],,}" == "photography" ]; then
+		comment+="$(get_meta_geography_location ${file})"
+	fi
+
 	if [ ${#category[@]} -gt 0 ]; then
 		comment+="[[Category:"${category}"]]"
 	else
 		comment+="[[Category:"${category_unknown}"]]"
 	fi
 
-	# retrieve author/location from filename[3]
-	if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]]; then
-		level0=$(reformat ${filename[3-${offset}]})
-		comment+="[["${level0}"]]"
-	else
-		level0="";
+	# validate filename[2]
+	if  [[ ${filename[2-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+		skip_after=1
 	fi
 
-	# retrieve description/sublocation from filename[4]
-	if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]]; then
+	# retrieve author/location from filename[3]
+	if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
+		level0=$(reformat ${filename[3-${offset}]})
+		comment+="[["${level0}"]]"
+	elif [[ ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+		skip_after=1
+	else
+		level0=""
+	fi
+
+	# retrieve description from filename[4]
+	if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
 		level1=$(reformat ${filename[4-${offset}]})
-		if [ ${level0} != "" ]; then
+		if [ ! -z "${level0}" ]; then
 			comment+="[["${level0}"/"${level1}"]]"
 		else
 			comment+="[["${level1}"]]"
 		fi
+	elif [[ ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+		skip_after=1
 	fi
 
 	# retrieve additional from the rest
 	start=$(( 5 - ${offset} ))
 	end=${#filename[@]}
 
-	if [ $end -gt $start ]; then
+	if [[ $end -gt $start ]] || [[ ${skip_afer} == 0 ]]; then
 		for i in $(eval echo "{$start..$end}");
 		do
-			if [[ ${filename[${i}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skipped}) ]]; then
+			if [[ ${filename[${i}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
 				comment+="[["$(reformat ${filename[${i}]})"]]"
+			elif [[ ${filename[${i}]} =~ ^(${keyword_skippall}) ]]; then
+				skip_after=1
 			fi
 		done
 	fi
@@ -400,6 +499,16 @@ function wiki_comment() {
 
 ## Main ----------------------------------------------------------------------
 media_dir="${1%/}"
+
+# prasing argument
+if [ $# -ne 1 ]; then
+	echo "ERROR - Insufficient arguments! "
+	show_usage
+	exit 1
+fi
+# remove trailing / of path if it has one
+readonly inFolder=${1%/}
+readonly outFolder=${2%/}
 
 if [ -z "$media_dir" ] || [ ! -d "${media_dir}" ]; then
 	exit_fail "Please provide directory that contains supported media file! "
@@ -435,9 +544,10 @@ exec_command "*** Creating temporary directory and pid_file ..." \
 # process the file and upload into mediaWiki.
 for file in ${array_files[@]};
 do
+	process_file="${work_dir}/$(get_filename ${file} | sed 's/-\{1,\}/-/g').$(get_filetype ${file,,})"
 	exec_command "*** process and upload file $(basename ${file}) ..." \
-		cp "${file}" "${work_dir}/$(get_filename ${file}).$(get_filetype ${file,,})"; \
-		php ${script_path}/maintenance/importImages.php ${work_dir} --comment=$(wiki_comment ${file}) >> ${log_file};
+		cp "${file}" "${process_file}"; \
+		php ${script_path}/maintenance/importImages.php ${work_dir} --comment=$(wiki_comment ${process_file}) >> ${log_file};
 
 	if [ $? -ne 0 ]; then
 		rm -f ${pid_file}
@@ -450,9 +560,12 @@ do
 done
 
 # rebuildfileCache.php will use when FileCache option is enable.
+# enable read permission for anonymous user and then disable
 exec_command "*** rebuild wiki media meta data ..." \
 	php ${script_path}/maintenance/rebuildImages.php >> ${log_file}; \
-	php ${script_path}/maintenance/rebuildFileCache.php >> ${log_file};
+	sed -i -r 's/^\$wgGroup(.*)read/\#$wgGroup\1read/' ${script_path}/LocalSettings.php; \
+	php ${script_path}/maintenance/rebuildFileCache.php >> ${log_file}; \
+	sed -i -r 's/^#\$wgGroup(.*)read/\$wgGroup\1read/' ${script_path}/LocalSettings.php;
 
 # remove pid_file and work_dir before closing
 rm -f ${pid_file}
