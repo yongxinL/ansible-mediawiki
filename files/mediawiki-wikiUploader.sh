@@ -20,11 +20,19 @@
 
 ## Function Library ----------------------------------------------------------
 print_info "*** Checking for required libraries." 2> /dev/null ||
+<<<<<<< HEAD
     source "$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )/functions.bash";
 
 ## Vars ----------------------------------------------------------------------
 # declare version
 script_version="1.0.9"
+=======
+	source "$( if [ "$( echo "${0%/*}" )" != "$( echo "${0}" )" ] ; then cd "$( echo "${0%/*}" )"; fi; pwd )/functions.bash";
+
+## Vars ----------------------------------------------------------------------
+# declare version
+script_version="1.0.10"
+>>>>>>> REL1_29
 
 # declare Logs, simple or verbose
 log_level=simple
@@ -215,6 +223,11 @@ category_level1="Buildings:Architecture/Buildings/General \
 				Anger:Self_Help/Self_Management/Anger \
 				Stress:Self_Help/Self_Management/Stress \
 				Time:Self_Help/Self_Management/Time \
+<<<<<<< HEAD
+=======
+				Culture:Social_Science/Popular_Culture \
+				Holidays:Social_Science/Holidays \
+>>>>>>> REL1_29
 				Reference:Social_Science/Reference \
 				Camping:Sports_&_Recreation/Camping \
 				Cycling:Sports_&_Recreation/Cycling \
@@ -240,8 +253,16 @@ category_unknown="uncategory"
 # define supported file type
 supported_filetype="gif|jpg|pdf|png|mov|mp4"
 
+<<<<<<< HEAD
 # define keyword for position skip
 keyword_skipped="xxx|skip|untitled"
+=======
+# define keyword for skipping position
+keyword_skipped="xxx|skip|untitled"
+
+# define keyword for skipping rest of position
+keyword_skippall="skipall"
+>>>>>>> REL1_29
 
 # working directory
 work_dir="/tmp/upload$$"
@@ -271,9 +292,15 @@ show_usage() {
 	echo "	This tools will load the supported media files from <directory>,  and import into MediaWiki"
 	echo "	with specified category and information based on the name of files. and the following media file"
 	echo "	can be supported in MediaWiki:"
+<<<<<<< HEAD
     echo "		*${supported_FileType}"
     echo ""
     echo "	The filename in format:"
+=======
+	echo "		*${supported_FileType}"
+	echo ""
+	echo "	The filename in format:"
+>>>>>>> REL1_29
 	echo "		* timestamp-category-subcategory-author-description-extrainfo-extrainfo-001.PNG"
 	echo "	- timestamp can be optional but the current date will be use."
 	echo "	- category and subcategory will be filled up only when predefined categories be found."
@@ -389,6 +416,7 @@ function wiki_comment() {
 	file="$1"
 	comment=\'
 	offset=0
+	skip_after=0
 
 	# analyze file
 	IFS='-' read -ra filename <<< "$(get_filename $1)"
@@ -433,44 +461,65 @@ function wiki_comment() {
 		fi
 	done
 
+	# retrieve location when in photography category
+	if [ "${filename[1],,}" == "pho" ] || [ "${filename[1],,}" == "photography" ]; then
+		comment+="$(get_meta_geography_location ${file})"
+	fi
+
 	if [ ${#category[@]} -gt 0 ]; then
 		comment+="[[Category:"${category}"]]"
 	else
 		comment+="[[Category:"${category_unknown}"]]"
 	fi
 
+<<<<<<< HEAD
 	# retrieve location when in photography category
 	if [ "${filename[1],,}" == "pho" ] || [ "${filename[1],,}" == "photography" ]; then
 		comment+="$(get_meta_geography_location ${file})"
+=======
+	# validate filename[2]
+	if  [[ ${filename[2-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+		skip_after=1
+>>>>>>> REL1_29
 	fi
 
 	# retrieve author/location from filename[3]
-	if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]]; then
+	if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
 		level0=$(reformat ${filename[3-${offset}]})
 		comment+="[["${level0}"]]"
+	elif [[ ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+		skip_after=1
 	else
-		level0="";
+		level0=""
 	fi
 
 	# retrieve description from filename[4]
+<<<<<<< HEAD
 	if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]]; then
+=======
+	if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
+>>>>>>> REL1_29
 		level1=$(reformat ${filename[4-${offset}]})
-		if [ ${level0} != "" ]; then
+		if [ ! -z "${level0}" ]; then
 			comment+="[["${level0}"/"${level1}"]]"
 		else
 			comment+="[["${level1}"]]"
 		fi
+	elif [[ ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+		skip_after=1
 	fi
 
 	# retrieve additional from the rest
 	start=$(( 5 - ${offset} ))
 	end=${#filename[@]}
 
-	if [ $end -gt $start ]; then
+	if [[ $end -gt $start ]] || [[ ${skip_afer} == 0 ]]; then
 		for i in $(eval echo "{$start..$end}");
 		do
-			if [[ ${filename[${i}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skipped}) ]]; then
+			if [[ ${filename[${i}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
 				comment+="[["$(reformat ${filename[${i}]})"]]"
+			elif [[ ${filename[${i}]} =~ ^(${keyword_skippall}) ]]; then
+				skip_after=1
 			fi
 		done
 	fi

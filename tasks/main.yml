@@ -10,6 +10,14 @@
 # =============================================================================
 
 ---
+
+- name: debugging
+  debug:
+    msg: 
+      - "result:"
+      - "the {{ install_role_name }} has be upgraded, now you start the Website"
+  tags: upgrade
+
 - name: check {{ install_role_name }} installation status
   stat:
     path: "{{ mediawiki_root }}/RELEASE-NOTES-1.{{ mediawiki_version.split('_')[1] }}"

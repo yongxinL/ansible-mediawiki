@@ -95,10 +95,19 @@
     repo: "{{ item.repo }}"
     dest: "{{ mediawiki_root }}/extensions/{{ item.name }}"
     version: "{{ item.version }}"
-    depth: 1
     force: yes
     update: yes
   with_items: "{{ mediawiki_3rdparty_extensions }}"
+
+- name: initialize WYSIWYG (CKEditor) extension
+  shell: "{{ item }}
+            chdir={{ mediawiki_root }}/extensions"
+  with_items:
+    - rm -rf {{ mediawiki_root }}/extensions/WYSIWYG/WYSIWYG/ckeditor_source
+    - rm -rf {{ mediawiki_root }}/extensions/WYSIWYG/SemanticForms
+    - rm -rf {{ mediawiki_root }}/extensions/WYSIWYG/WikiEditor
+    - mv {{ mediawiki_root }}/extensions/WYSIWYG/WYSIWYG/* {{ mediawiki_root }}/extensions/WYSIWYG/
+    - rm -rf {{ mediawiki_root }}/extensions/WYSIWYG/WYSIWYG
 
 - name: initialize {{ install_role_name }} extensions and submodule
   command: "git submodule update --init
@@ -117,7 +126,7 @@
 
 - name: create {{ install_role_name }} services directory
   file:
-    path: "{{ mediawiki_root.split('/')[0:-1]|join('/') }}services"
+    path: "{{ mediawiki_root }}/services"
     state: directory
     mode: 0644
 
@@ -131,11 +140,11 @@
     update: yes
   with_items: "{{ mediawiki_core_services }}"
 
-- name: initialize {{ install_role_name }} Parsoid Services
+- name: remove .git recursively from installation
   shell:  "{{ item }}
-          chdir={{ mediawiki_root }}/services/parsoid"
+          chdir={{ mediawiki_root }}"
   with_items:
-    - npm install
+    - "find . ! -name services | grep .git | xargs rm -rf"
 
 - name: copy {{ install_role_name }} customization files
   copy:
@@ -154,5 +163,5 @@
     - rm -f COPYING CREDITS FAQ HISTORY INSTALL README README.mediawiki UPGRADE
     - rm -rf docs tests
     - find {{ mediawiki_root }}/languages/i18n/ -type f -not \( -iname 'en*' -or -iname 'zh*' \) | xargs rm -f
-    - find . -print | while read filename; do touch -d 'Oct 11 2016' "$filename"; done
+    - find . -print | while read filename; do touch -d '{{ mediawiki_startdate }}' "$filename"; done
     - tar -czvf ../mediawiki_REL1{{ mediawiki_version.split('_')[1] }}_setup_$(date '+%Y%m%d').tar.gz ../$(basename {{ mediawiki_root }})

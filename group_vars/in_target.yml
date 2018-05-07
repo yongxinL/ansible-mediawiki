@@ -16,15 +16,26 @@
 #    :local:
 #
 
+<<<<<<< HEAD
+=======
+# .. envvar:: mediawiki_version
+#
+# specify the MediaWiki version clone from repository
+mediawiki_version: 'REL1_29'
+
+>>>>>>> REL1_29
 # .. envvar:: target_host_domain
 #
 # Specify hostname and domain that should be set in the target image.
 target_host_domain: 'lifamilylife.com'
+<<<<<<< HEAD
 
 # .. envvar:: mediawiki_uniqueid
 #
 # Specify mediaiwki uniqueid
 mediawiki_uniqueid: 'sandbox'
+=======
+>>>>>>> REL1_29
 
 # .. envvar:: target_root_password
 #
@@ -45,9 +56,17 @@ target_appdata_root: '{{ target_data_root }}/private/var'
 # .. envvar:: mediawiki_admin_user
 #
 # Specify admin user for mediaWiki site
+<<<<<<< HEAD
 mediawiki_admin_user: 'wikiadmin'
+=======
+mediawiki_db_user: '{{ install_role_name }}'
+>>>>>>> REL1_29
 
 # .. envvar:: mediawiki_db_name
 #
 # specify the MediaWiki databaes name
+<<<<<<< HEAD
 mediawiki_db_name: 'wikidata'
+=======
+mediawiki_db_name: 'wikidata_{{ mediawiki_uniqueid }}'
+>>>>>>> REL1_29
