@@ -41,7 +41,7 @@
       name: nginx
       state: stopped
   - service:
-      name: php7.0-fpm
+      name: php7.1-fpm
       state: stopped
   - service:
       name: parsoid
@@ -182,7 +182,7 @@
       name: nginx
       state: restarted
   - service:
-      name: php7.0-fpm
+      name: php7.1-fpm
       state: restarted
   - service:
       name: parsoid
