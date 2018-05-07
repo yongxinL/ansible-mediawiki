@@ -91,8 +91,8 @@ $wgMiserMode = true;
 
 # Text cache
 $wgCompressRevisions = true; // use with care (see talk page)
-$wgRevisionCacheExpiry = 100;     // 3*24*3600;
-$wgParserCacheExpireTime = 100;   // 14*24*3600;
+$wgRevisionCacheExpiry = 3*24*3600;
+$wgParserCacheExpireTime = 14*24*3600;
 
 ## File cache
 $wgUseFileCache = true;
@@ -290,14 +290,8 @@ $wgNamespaceContentModels[NS_CATEGORY_TALK] = 'flow-board';
 {% endfor %}
 {% endif %}
 
-## Extension: VisualEditor
-wfLoadExtension( 'VisualEditor' );
-
 # Enable by default for everybody
 $wgDefaultUserOptions['visualeditor-enable'] = 1;
-
-# Optional: Set VisualEditor as the default for anonymous users
-$wgDefaultUserOptions['visualeditor-editor'] = "visualeditor";
 
 // Don't allow users to disable it
 $wgHiddenPrefs[] = 'visualeditor-enable';
@@ -357,13 +351,18 @@ $wgScribuntoUseGeSHi = true;
 ## Extension: ConfirmEdit
 #wfLoadExtensions( array( 'ConfirmEdit', 'ConfirmEdit/ReCaptchaNoCaptcha' ) );
 #$wgCaptchaClass = 'ReCaptchaNoCaptcha';
-#$wgReCaptchaSiteKey = '6Lc6LRYUAAAAAKenSrh9iQRnNTyudDajxS6icPj2';
-#$wgReCaptchaSecretKey = '6Lc6LRYUAAAAAB8mhoaC0i5IB_ixYCuWMOpOOcLp';
+#$wgReCaptchaSiteKey = '6LcQI0cUAAAAAP8DPAoBrVwuBYRGidcLimbzGGFT';
+#$wgReCaptchaSecretKey = '6LcQI0cUAAAAAGjDO-dfW61-tSqEa04uY7hikwFK';
 $wgCaptchaTriggers['edit']          = false;
 $wgCaptchaTriggers['create']        = false;
 $wgCaptchaTriggers['addurl']        = false;
 $wgCaptchaTriggers['createaccount'] = true;
 $wgCaptchaTriggers['badlogin']      = true;
+
+## Extension: Math
+#  Set MathML as default rendering option
+$wgDefaultUserOptions['math'] = 'mathml';
+$wgMathFullRestbaseURL= 'https://en.wikipedia.org/api/rest_';
 
 ## Extension: MobileFrontend
 #  Enable MobileFrontend
