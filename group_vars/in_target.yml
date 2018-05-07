@@ -16,12 +16,15 @@
 #    :local:
 #
 
-# .. envvar:: target_host_name
+# .. envvar:: mediawiki_version
+#
+# specify the MediaWiki version clone from repository
+mediawiki_version: 'REL1_29'
+
 # .. envvar:: target_host_domain
 #
 # Specify hostname and domain that should be set in the target image.
-target_host_name: 'central'
-target_host_domain: 'lifamilyclub.com'
+target_host_domain: 'lifamilylife.com'
 
 # .. envvar:: target_root_password
 #
@@ -39,3 +42,12 @@ target_data_root: '/yongxin'
 # in case if you want to collect all appdata files in one
 target_appdata_root: '{{ target_data_root }}/private/var'
 
+# .. envvar:: mediawiki_admin_user
+#
+# Specify admin user for mediaWiki site
+mediawiki_db_user: '{{ install_role_name }}'
+
+# .. envvar:: mediawiki_db_name
+#
+# specify the MediaWiki databaes name
+mediawiki_db_name: 'wikidata_{{ mediawiki_uniqueid }}'
