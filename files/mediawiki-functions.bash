@@ -17,7 +17,7 @@ set -e
 
 ## Vars ----------------------------------------------------------------------
 # declare version
-lib_version="1.0.5"
+lib_version="1.0.6"
 
 # reload script with bash
 if [ ! -n "${BASH_VERSION}" ]; then

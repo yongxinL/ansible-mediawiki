@@ -46,19 +46,15 @@
 			"targets": [ "desktop", "mobile" ],
 			"position": "top",
 			"styles": [
-				"fonts/fontawesome.less",
-				"bootstrap_v4a/css/animate.css",
-				"bootstrap_v4a/css/normalize.css",
-				"bootstrap_v4a/css/tether.min.css",
-				"bootstrap_v4a/css/bootstrap.min.css",
+				"assets/bootstrap/4.1.1/css/bootstrap.min.css",
+				"assets/webfonts/fontawesome/fontawesome.min.css",
 				"responsive.less"
 			]
 		},
 		"skins.vector.js": {
 			"scripts": [
-				"bootstrap_v4a/js/jquery-3.2.1.min.js",
-				"bootstrap_v4a/js/tether.min.js",
-				"bootstrap_v4a/js/bootstrap.min.js",
+				"assets/popper/popper-1.12.9.min.js",
+				"assets/bootstrap/4.1.1/js//bootstrap.min.js",
 				"collapsibleTabs.js",
 				"vector.js"
 			],
@@ -102,6 +98,7 @@
 	"config": {
 		"VectorUseSimpleSearch": true,
 		"VectorUseIconWatch": true,
+		"VectorExperimentalPrintStyles": false,
 		"VectorResponsive": false
 	},
 	"manifest_version": 1

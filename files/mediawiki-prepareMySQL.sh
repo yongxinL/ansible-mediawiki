@@ -38,7 +38,7 @@ db_user=$(sed -n 's/^$wgDBuser = "\([^"]*\)";/\1/p' ${script_path}/LocalSettings
 db_pass=$(sed -n 's/^$wgDBpassword = "\([^"]*\)";/\1/p' ${script_path}/LocalSettings.php)
 
 print_info "You should need below command to create the database dump.
-mysqldump -h localhost -u root -p ${db_name} > ${script_path}/dbs/wikidb_dump_$(date '+%Y%m%d').sql"
+mysqldump -h localhost -u root -p ${db_name} > ${script_path}/conf.d/wikidb_dump_$(date '+%Y%m%d').sql"
 
 read -p "Are you sure you want to continue? <y/N> " prompt
 if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]]; then
@@ -52,7 +52,11 @@ if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]
     echo "CREATE DATABASE IF NOT EXISTS ${db_name} /*\!40100 DEFAULT CHARACTER SET utf8 */;" >> ${script_path}/preparedb.sql
     echo "/* - there is not create user if not exist command, " >> ${script_path}/preparedb.sql
     echo "     but grant privileges will create user first if user doesn't exist! */" >> ${script_path}/preparedb.sql
+<<<<<<< HEAD
     echo "GRANT ALL PRIVILEGES ON ${db_name}.* TO '${db_user}'@'localhost';" >> ${script_path}/preparedb.sql
+=======
+    echo "GRANT ALL PRIVILEGES ON ${db_name}.* TO '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';" >> ${script_path}/preparedb.sql
+>>>>>>> 86e67d0a79449e3323c1a5c7cc83f029af7f16e6
     echo "/* - reset user password. */" >> ${script_path}/preparedb.sql
     echo "UPDATE mysql.user" >> ${script_path}/preparedb.sql
     echo "    SET authentication_string = PASSWORD('${db_pass}'), password_expired = 'N'" >> ${script_path}/preparedb.sql
@@ -66,7 +70,11 @@ if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]
     	rm -f ${script_path}/preparedb.sql
     fi
 
+<<<<<<< HEAD
     if [ -f "${script_path}/dbs/wikidb_dump.sql" ]; then
+=======
+    if [ -f "${script_path}/conf.d/wikidb_dump.sql" ]; then
+>>>>>>> 86e67d0a79449e3323c1a5c7cc83f029af7f16e6
         print_info "import database backup ..."
         mysql -uroot -p${rootpasswd} ${db_name} < ${script_path}/dbs/wikidb_dump.sql
         php ${script_path}/maintenance/update.php --quick
