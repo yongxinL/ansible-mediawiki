@@ -82,6 +82,11 @@ mediawiki_admin_email: 'webmaster@{{ target_host_domain }}'
 # Specify log file for mediaWiki site, add $wgResourceBasePath in the front
 mediawiki_logo: '$wgResourceBasePath/images/wikipedia_logo.png'
 
+# .. envvar:: mediawiki_startdate
+#
+# Specify the date for starting the Wiki
+mediawiki_startdate: 'Oct 11 2016'
+
 # .. envvar:: target_appdata_root
 #
 # Specify folder that will be use as new location of application data files
@@ -150,10 +155,10 @@ mediawiki_core_extensions:
 #
 # List of skins will be download from 3rd-party repository
 mediawiki_3rdparty_extensions:
-  - { name: 'DynamicPageList', repo: 'https://github.com/Alexia/DynamicPageList.git', version: '559e5ce', type: 'wfload' }      # Create lists of other articles based on their category etc.
-  - { name: 'EmbedVideo', repo: 'https://github.com/HydraWiki/mediawiki-embedvideo.git', version: '150d248', type: 'wfload' }   # embedding video clips from over 24 popular video sharing services
+  - { name: 'DynamicPageList', repo: 'https://github.com/Alexia/DynamicPageList.git', version: 'e64fa08', type: 'wfload' }      # Create lists of other articles based on their category etc.
+  - { name: 'EmbedVideo', repo: 'https://github.com/HydraWiki/mediawiki-embedvideo.git', version: '6e4a243', type: 'wfload' }   # embedding video clips from over 24 popular video sharing services
   - { name: 'PDFEmbed', repo: 'https://github.com/HydraWiki/PDFEmbed.git', version: '5a58679', type: 'wfload' }                 # allows Adobe Acrobat PDF files to be embedded into a wiki article using tags
-  - { name: 'WYSIWYG', repo: 'https://github.com/Mediawiki-wysiwyg/WYSIWYG-CKeditor.git', version: 'wysiwyg_mw128_462', type: 'wfload' }   # another WYSIWYG editor based on CKEditor
+  - { name: 'WYSIWYG', repo: 'https://github.com/Mediawiki-wysiwyg/WYSIWYG-CKeditor.git', version: '8a8f972', type: 'wfload' }   # another WYSIWYG editor based on CKEditor
 
 # .. envvar:: mediawiki_extension_dependency
 #
