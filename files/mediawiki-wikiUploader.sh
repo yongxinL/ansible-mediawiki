@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 #
-# - Copyright (C) 2017     George Li <yongxinl@outlook.com>
+# - Copyright (C) 2021     George Li <yongxinl@outlook.com>
 #
 # - This is part of Family journal Wiki project.
 #
@@ -24,11 +24,27 @@ print_info "*** Checking for required libraries." 2> /dev/null ||
 
 ## Vars ----------------------------------------------------------------------
 # declare version
-script_version="1.0.10"
+script_version="1.21.01"
+debug=true
 
 # declare Logs, simple or verbose
 log_level=simple
 log_file=/var/log/mediawiki.log
+
+# define supported file type
+supported_filetype="gif|jpg|pdf|png|mov|mp4|svg"
+
+# define keyword for skipping position
+keyword_skipped="xxx|skip|untitled"
+
+# define keyword for skipping rest of position
+keyword_skippall="skipall"
+
+# working directory
+work_dir="/tmp/upload$$"
+
+# pid file
+pid_file="/var/run/${script_name}.pid"
 
 # define category and keyword, split by : and space between the category
 category_level0="arc:Architecture/General \
@@ -64,11 +80,23 @@ category_level0="arc:Architecture/General \
 				trv:Travel/General \
 				";
 category_level1="Buildings:Architecture/Buildings/General \
+				Residential:Architecture/Buildings/Residential \
+				Decoration:Architecture/Decoration_&_Ornament \
 				Design:Architecture/Design \
+				History:Architecture/History/General \
 				Interior:Architecture/Interior_Design/General \
+				Lighting:Architecture/Interior_Design/Lighting \
 				Landscape:Architecture/Landscape \
+				Methods:Architecture/Methods_&_Materials \
 				Reference:Architecture/Reference \
 				Study:Architecture/Study_&_Teaching \
+				African:Art/African \
+				American:Art/American/General \
+				Asian:Art/Asian/General \
+				Chinese:Art/Asian/Chinese \
+				Australian:Art/Australian_&_Oceanian \
+				Body:Art/Body_Art_&_Tattooing \
+				Digital:Art/Digital \
 				History:Art/History/General \
 				Performance:Art/Performance \
 				Reference:Art/Reference \
@@ -239,21 +267,6 @@ category_level1="Buildings:Architecture/Buildings/General \
 				";
 category_unknown="uncategory"
 
-# define supported file type
-supported_filetype="gif|jpg|pdf|png|mov|mp4"
-
-# define keyword for skipping position
-keyword_skipped="xxx|skip|untitled"
-
-# define keyword for skipping rest of position
-keyword_skippall="skipall"
-
-# working directory
-work_dir="/tmp/upload$$"
-
-# pid file
-pid_file="/var/run/${script_name}.pid"
-
 # check if exiftool  (meta data) installed
 if [ $(command -v exiftool) ]; then
 	meta_query=$(which exiftool)
@@ -279,14 +292,17 @@ show_usage() {
 	echo "		*${supported_FileType}"
 	echo ""
 	echo "	The filename in format:"
-	echo "		* timestamp-category-subcategory-author-description-extrainfo-extrainfo-001.PNG"
+	echo "    - for standard filename"
+	echo "      * timestamp-category-(subcategory)-page-(subpage)-title-001.PNG"
+	echo "    - for Photo (aka photograph)"
+	echo "		* timestamp-photography-subcategory-city-location-extrainfo-extrainfo-001.PNG"
 	echo "	- timestamp can be optional but the current date will be use."
-	echo "	- category and subcategory will be filled up only when predefined categories be found."
-	echo "	- subcategory can be optional"
-	echo "	- unkonwn category will be assign to category:${unknown_category}."
-	echo "	- category will be classified as category/subcategory"
-	echo "	- author and description will be classified as article in format [author] and [author/description]"
-	echo "	- extrainfo is optional but will be classified as article in format [extrainfo] when provided"
+	echo "	- category and subcategory (optional) will be filled up only when predefined categories be found."
+	echo "	- unkonwn category will NOT assign to any category."
+	echo "  - unset subcategory will assign to <category>/General"
+	echo "	- category will be classified as category/subcategory if possible"
+	echo "	- page and subpage will be classified as article in format [page] and [page/subpage]"
+	echo "  - city and location will be classified in format [city] and [city/location]"
 	echo ""
 }
 
@@ -326,17 +342,17 @@ function get_category_root() {
 
 # return sub category in given category
 function get_subcategory_array() {
-	local category_key category subcategory
+    local category_key category subcategory
 
-	category_key="$(get_category_root $1)"
+    category_key="$(get_category_root $1)"
 
-	for category in ${category_level1[@]};
-	do
-		if [ "$(get_category_root ${category})" == "${category_key}" ]; then
-			subcategory=("${subcategory[@]}" "${category}")
-		fi
-	done
-	echo -n "${subcategory[@]}"
+    for category in ${category_level1[@]};
+    do
+        if [ "$(get_category_root ${category})" == "${category_key}" ]; then
+            subcategory=("${subcategory[@]}" "${category}")
+        fi
+    done
+    echo -n "${subcategory[@]}"
 }
 
 # convert GPS coordinate from dms (Degrees Minutes Seconds) 
@@ -347,154 +363,193 @@ function get_subcategory_array() {
 # 2. combine direction letters (N,S,W,E) as a pair
 # 3. convert to DD (Decimal Degrees)
 function get_geocoding_in_dd() {
-	args_or_stdin $@ | sed 's/[^0-9NEWS.]/ /g' | sed 's/ \{1,\}/ /g' \
-		| awk '{print $0, substr($4,length($4),1)substr($8,length($8),1)}' \
-		| awk '{if ($9=="NE") {printf ("%.4f\t%.4f\n",$1+$2/60+$3/3600,$5+$6/60+$7/3600)} \
-		else if ($9=="NW") {printf ("%.4f\t%.4f\n",$1+$2/60+$3/3600,-($5+$6/60+$7/3600))} \
-		else if ($9=="SE") {printf ("%.4f\t%.4f\n",-($1+$2/60+$3/3600),$5+$6/60+$7/3600)} \
-		else if ($9=="SW") {printf ("%.4f\t%.4f\n",-($1+$2/60+$3/3600),-($5+$6/60+$7/3600))}}'
+    args_or_stdin $@ | sed 's/[^0-9NEWS.]/ /g' | sed 's/ \{1,\}/ /g' \
+        | awk '{print $0, substr($4,length($4),1)substr($8,length($8),1)}' \
+        | awk '{if ($9=="NE") {printf ("%.4f\t%.4f\n",$1+$2/60+$3/3600,$5+$6/60+$7/3600)} \
+        else if ($9=="NW") {printf ("%.4f\t%.4f\n",$1+$2/60+$3/3600,-($5+$6/60+$7/3600))} \
+        else if ($9=="SE") {printf ("%.4f\t%.4f\n",-($1+$2/60+$3/3600),$5+$6/60+$7/3600)} \
+        else if ($9=="SW") {printf ("%.4f\t%.4f\n",-($1+$2/60+$3/3600),-($5+$6/60+$7/3600))}}'
 }
 
 # Geocoding and return Location data
+# comment+="$(get_meta_geography_location ${file})"
 function get_meta_geography_location() {
-	local geography_names=('city' 'state' 'country')
-	local ii gps_coordinate
-	for (( ii = 0; ii < ${#geography_names[@]}; ii++))
-	do
-		eval "${geography_names[ii]}=\$(${meta_query} -T -${geography_names[ii]} $1 | tr -d '[:space:]')" || exit_fail "Error during argument parsing." 1
-	done
+    local geography_names=('city' 'state' 'country')
+    local ii gps_coordinate
+    for (( ii = 0; ii < ${#geography_names[@]}; ii++))
+    do
+        eval "${geography_names[ii]}=\$(${meta_query} -T -${geography_names[ii]} $1 | tr -d '[:space:]')" || exit_fail "Error during argument parsing." 1
+    done
 
-	if [ ${#city} -lt 2 ] || [ ${#state} -lt 2 ] || [ ${#country} -lt 2 ]; then
-		# retrieive GPS coordinates
-		gps_coordinate=$(get_geocoding_in_dd $(${meta_query} -T -GPSLatitude -GPSLongitude $1))
-		# todo reserve Geocoding base on GPS coordinates
-	else
-		echo "[[Category:$(reformat ${country})/$(reformat ${state})/$(reformat ${city})]]"
-	fi
+    if [ ${#city} -lt 2 ] || [ ${#state} -lt 2 ] || [ ${#country} -lt 2 ]; then
+        # retrieive GPS coordinates
+        gps_coordinate=$(get_geocoding_in_dd $(${meta_query} -T -GPSLatitude -GPSLongitude $1))
+        # todo reserve Geocoding base on GPS coordinates
+    elif [ ${#city} -lt 2 ] || [ ${#country} -lt 2 ]; then
+        echo "[[Category:$(reformat ${country})/$(reformat ${city})]]"
+    else
+        echo "[[Category:$(reformat ${country})/$(reformat ${state})/$(reformat ${city})]]"
+    fi
 }
 
 # return text in specify format
 function reformat() {
-	local text="$(trim $1)"
-	# the text will be convert as
-	# 1. caption
-	# 2. uppercase the first characters after _
-	# 3. remove _ from string
-	# 4. add space before uppercase, [sed 's/\([A-Z][^ ]\)/ \1/g'] will result to [DrawAPicture => Draw APicture]
-	#    change [sed 's/\([A-Z]\)/ \1/g'] will result to [DrawAPicture => Draw A Picture]
-	# 5. remove space in the beginner
-	# 6. replace the space with _
-	echo $(echo ${text^} | sed -e 's/_./\U&/g' | sed 's/_//g' | sed 's/\([A-Z][^ ]\)/ \1/g' | sed 's/^[ \t]*//g' | sed 's/ /_/g' )
+    local text="$(trim $1)"
+    # the text will be convert as
+    # 1. echo ${text^}                  : caption
+    # 2. sed -e 's/_./\U&/g'            : uppercase the first characters after _
+    # 3. sed 's/_//g'                   : remove _ from string
+    # 4. sed 's/\([A-Z]\)/ \1/g'        : add space before uppercase, will result to [DrawAPicture => Draw A Picture]
+    #                                     [sed 's/\([A-Z][^ ]\)/ \1/g'] will result to [DrawAPicture => Draw APicture]
+    # 5. sed 's/\([A-Z][^ ]\)/_\1/g'    : add _ before uppercase will result to [DrawAPicture => _Draw_APicture]
+    # 6. sed 's/ //g'                   : remove space
+    # 7. sed 's/^[_\t]*//g'             : remove _ in the beginner
+    # 8. sed 's/ /_/g'                  : replace space with _
+    #echo $(echo ${text^} | sed -e 's/_./\U&/g' | sed 's/_//g' | sed 's/\([A-Z][^ ]\)/ \1/g' | sed 's/^[ \t]*//g' | sed 's/ /_/g' )
+    echo $(echo ${text^} | sed -e 's/_./\U&/g' | sed 's/_//g' | sed 's/\([A-Z]\)/ \1/g' | sed 's/\([A-Z][^ ]\)/_\1/g' | sed 's/ //g' | sed 's/^[_\t]*//g' | sed 's/ /_/g')
 }
 
 # return wiki comment in given filename
 function wiki_comment() {
-	local file filename category level0 level1 keycode name offset comment
+    local file filename category level0 level1 keycode name offset comment
 
-	file="$1"
-	comment=\'
-	offset=0
-	skip_after=0
+    file="$1"
+    comment=\'
+    offset=0
+    skip_after=0
 
-	# analyze file
-	IFS='-' read -ra filename <<< "$(get_filename $1)"
+    # analyzing filename
+    IFS='-' read -ra filename <<< "$(get_filename $1)"
 
 	# retrieve date from filename[0]
-	if [[ ! ${filename[0]} =~ ^[^0-9]+ ]]; then
-		# check if date can be convert
-		if date --date="${filename[0]}" +"%Y" > /dev/null; then
-			comment+="[[Category:"$(date --date="${filename[0]}" +"%Y")"/"$(date --date="${filename[0]}" +"%Y0%m")"]]"
+    if [[ ! ${filename[0]} =~ ^[^0-9]+ ]]; then
+        # check if date can be convert
+        if date --date="${filename[0]}" +"%Y" > /dev/null; then
+            comment+="[[Category:"$(date --date="${filename[0]}" +"%Y")"/"$(date --date="${filename[0]}" +"%Y0%m")"]]"
+        else
+            comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y0%m")"]]"
+        fi
+    else
+        comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y0%m")"]]"
+        filename=("xxxx" "${filename[@]}")
+    fi
+
+    # retrieve category and subcategory from filename[1,2]
+    for level0 in ${category_level0};
+    do
+        keycode=$(lowercase $(get_category_keycode ${level0}))
+        name=$(lowercase $(get_category_root ${level0}))
+
+        # analyze filename[1] and get root category
+        if [ ${filename[1],,} == ${keycode} ] || [ ${filename[1],,} == ${name} ]; then
+
+            # assign to root category
+            category=$(get_category_name ${level0})
+            # analyze filename[2] and get subcategory
+            for level1 in $(get_subcategory_array ${category});
+            do
+                keycode=$(lowercase $(get_category_keycode ${level1}))
+
+                if [ ${filename[2],,} == ${keycode} ]; then
+                    category=$(get_category_name ${level1})
+                fi
+            done
+            # update offset when subcategory is not identified
+            if [ ${category} == $(get_category_name ${level0}) ]; then
+                offset=1
+            fi
+        fi
+    done
+
+    if [ ${#category[@]} -gt 0 ]; then
+        comment+="[[Category:"${category}"]]"
+    else
+        comment+="[[Category:"${category_unknown}"]]"
+    fi
+
+    # validate filename[2]
+    if  [[ ${filename[2-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+        skip_after=1
+    fi
+
+    if [ "${filename[1],,}" == "pho" ] || [ "${filename[1],,}" == "photography" ]; then
+		# retrieve location when in photography category
+
+		# retrieve state/city from filename[3]
+		if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
+			level0=$(reformat ${filename[3-${offset}]})
+			comment+="[["${level0}"]]"
+		elif [[ ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+			skip_after=1
 		else
-			comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y0%m")"]]"
+			level0=""
 		fi
-	else
-		comment+="[[Category:"$(date +"%Y")"/"$(date +"%Y0%m")"]]"
-		filename=("xxxx" "${filename[@]}")
-	fi
 
-	# retrieve category and subcategory from filename[1,2]
-	for level0 in ${category_level0};
-	do
-		keycode=$(lowercase $(get_category_keycode ${level0}))
-		name=$(lowercase $(get_category_root ${level0}))
-
-		# analyze filename[1] and get root category
-		if [ ${filename[1],,} == ${keycode} ] || [ ${filename[1],,} == ${name} ]; then
-
-			# assign to root category
-			category=$(get_category_name ${level0})
-			# analyze filename[2] and get subcategory
-			for level1 in $(get_subcategory_array ${category});
-			do
-				keycode=$(lowercase $(get_category_keycode ${level1}))
-
-				if [ ${filename[2],,} == ${keycode} ]; then
-					category=$(get_category_name ${level1})
-				fi
-			done
-			# update offset when subcategory is not identified
-			if [ ${category} == $(get_category_name ${level0}) ]; then
-				offset=1
+		# retrieve city/sublocation from filename[4]
+		if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
+			level1=$(reformat ${filename[4-${offset}]})
+			if [ ! -z "${level0}" ]; then
+				comment+="[["${level0}"/"${level1}"]]"
+			else
+				comment+="[["${level1}"]]"
 			fi
+		elif [[ ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+			skip_after=1
 		fi
-	done
 
-	# retrieve location when in photography category
-	if [ "${filename[1],,}" == "pho" ] || [ "${filename[1],,}" == "photography" ]; then
-		comment+="$(get_meta_geography_location ${file})"
-	fi
+		# retrieve additional from the rest if category is photography
+        start=$(( 5 - ${offset} ))
+        end=${#filename[@]}
 
-	if [ ${#category[@]} -gt 0 ]; then
-		comment+="[[Category:"${category}"]]"
+        if [[ $end -gt $start ]] || [[ ${skip_afer} == 0 ]]; then
+            for i in $(eval echo "{$start..$end}");
+            do
+                if [[ ${filename[${i}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
+                    comment+="[["$(reformat ${filename[${i}]})"]]"
+                elif [[ ${filename[${i}]} =~ ^(${keyword_skippall}) ]]; then
+                    skip_after=1
+                fi
+            done
+        fi
+
 	else
-		comment+="[[Category:"${category_unknown}"]]"
-	fi
 
-	# validate filename[2]
-	if  [[ ${filename[2-${offset}]} =~ ^(${keyword_skippall}) ]]; then
-		skip_after=1
-	fi
+		# retrieve author from filename[3]
+		if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
+			level0=$(reformat ${filename[3-${offset}]})
+			# add category before article
+			#comment+="[["${category/%\/*/}"/"${level0}"]]"
 
-	# retrieve author/location from filename[3]
-	if [[ ${filename[3-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
-		level0=$(reformat ${filename[3-${offset}]})
-		comment+="[["${level0}"]]"
-	elif [[ ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]]; then
-		skip_after=1
-	else
-		level0=""
-	fi
-
-	# retrieve description from filename[4]
-	if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
-		level1=$(reformat ${filename[4-${offset}]})
-		if [ ! -z "${level0}" ]; then
-			comment+="[["${level0}"/"${level1}"]]"
+			comment+="[["${level0}"]]"
+		elif [[ ${filename[3-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+			skip_after=1
 		else
-			comment+="[["${level1}"]]"
+			level0=""
 		fi
-	elif [[ ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]]; then
-		skip_after=1
-	fi
 
-	# retrieve additional from the rest
-	start=$(( 5 - ${offset} ))
-	end=${#filename[@]}
+		# retrieve description from filename[4]
+		if [[ ${filename[4-${offset}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
+			level1=$(reformat ${filename[4-${offset}]})
+			if [ ! -z "${level0}" ]; then
+				# add category before article
+				#comment+="[["${category/%\/*/}"/"${level0}"/"${level1}"]]"
 
-	if [[ $end -gt $start ]] || [[ ${skip_afer} == 0 ]]; then
-		for i in $(eval echo "{$start..$end}");
-		do
-			if [[ ${filename[${i}]} =~ ^[^0-9]+ ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skipped}) ]] && [[ ! ${filename[${i}]} =~ ^(${keyword_skippall}) ]] && [[ ${skip_after} = 0 ]]; then
-				comment+="[["$(reformat ${filename[${i}]})"]]"
-			elif [[ ${filename[${i}]} =~ ^(${keyword_skippall}) ]]; then
-				skip_after=1
+				comment+="[["${level0}"/"${level1}"]]"
+			else
+				# add category before article
+				#comment+="[["${category/%\/*/}"/"${level1}"]]"
+
+				comment+="[["${level1}"]]"
 			fi
-		done
-	fi
+		elif [[ ${filename[4-${offset}]} =~ ^(${keyword_skippall}) ]]; then
+			skip_after=1
+		fi
 
-	# end of comment
-	comment+=\'
-	echo -n ${comment}
+    fi
+
+    # end of comment
+    comment+=\'
+    echo -n ${comment}
 }
 
 ## Main ----------------------------------------------------------------------
@@ -502,70 +557,83 @@ media_dir="${1%/}"
 
 # prasing argument
 if [ $# -ne 1 ]; then
-	echo "ERROR - Insufficient arguments! "
-	show_usage
-	exit 1
+    echo "ERROR - Insufficient arguments! "
+    show_usage
+    exit 1
 fi
 # remove trailing / of path if it has one
 readonly inFolder=${1%/}
 readonly outFolder=${2%/}
 
 if [ -z "$media_dir" ] || [ ! -d "${media_dir}" ]; then
-	exit_fail "Please provide directory that contains supported media file! "
+    exit_fail "Please provide directory that contains supported media file! "
 fi
 
-if [ ! -f "${script_path}/LocalSettings.php" ] || [ ! -f "${script_path}/maintenance/importImages.php" ]; then
-	exit_fail "Please run this script in MediaWiki root directory! "
-fi
+if [ "$debug" != true ]; then
+	if [ ! -f "${parent_path}/LocalSettings.php" ] || [ ! -f "${parent_path}/maintenance/importImages.php" ]; then
+		exit_fail "Unable to find required configuration file in ${parent_path} directory ..."
+	fi
 
-if [ -f "${pid_file}" ]; then
-	exit_fail "Please wait as other user is importing the media files!"
+	if [ -f "${pid_file}" ]; then
+		exit_fail "Please wait as other user is importing the media files!"
+	fi
 fi
 
 # checking files in given directory
 array_files_all=$(find ${media_dir}/ -maxdepth 2 -type f -not -path '*/\.*')
 for file in ${array_files_all[@]};
 do
-	if [[ $(get_filetype ${file,,}) =~ ^(${supported_filetype}) ]]; then
-		array_files=("${file}" "${array_files[@]}")
-	fi
+    if [[ $(get_filetype ${file,,}) =~ ^(${supported_filetype}) ]]; then
+        array_files=("${file}" "${array_files[@]}")
+    fi
 done
 
 unset array_files_all;
 
 if [ -${#array_files[@]} -eq 0 ]; then
-	exit_fail "The directory ${media_dir} does not contains supported file!"
+    exit_fail "The directory ${media_dir} does not contains supported file!"
 fi
 
 exec_command "*** Creating temporary directory and pid_file ..." \
-	mkdir -p "${work_dir}"; \
-	touch ${pid_file};
+    mkdir -p "${work_dir}"; \
+    touch ${pid_file};
 
 # process the file and upload into mediaWiki.
 for file in ${array_files[@]};
 do
-	process_file="${work_dir}/$(get_filename ${file} | sed 's/-\{1,\}/-/g').$(get_filetype ${file,,})"
-	exec_command "*** process and upload file $(basename ${file}) ..." \
-		cp "${file}" "${process_file}"; \
-		php ${script_path}/maintenance/importImages.php ${work_dir} --comment=$(wiki_comment ${process_file}) >> ${log_file};
+	process_file="$(get_filename ${file} | sed 's/-\{1,\}/-/g').$(get_filetype ${file,,})"
+	comments="$(wiki_comment ${file})"
+	exec_command "*** process ${process_file} ..." \
+		print_info "${comments}";
 
-	if [ $? -ne 0 ]; then
-		rm -f ${pid_file}
-		exit_fail "error when importing file ${file}!"
+	if [ "$debug" = true ]; then
+		print_info ${comments}
 	else
-		# remove file from both of media and work directory
-		rm -f ${file}
-		rm -f ${work_dir}/*
+		exec_command "*** uploading file $(basename ${file}) ..." \
+			cp "${file}" "${work_dir}/${process_file}"; \
+			php ${parent_path}/maintenance/importImages.php ${work_dir} --comment=${comments} >> ${log_file};
+
+		if [ $? -ne 0 ]; then
+			rm -f ${pid_file}
+			exit_fail "error when importing file ${file}!"
+		else
+			# remove file from both of media and work directory
+			rm -f ${file}
+			rm -f ${work_dir}/*
+		fi
 	fi
+
 done
 
 # rebuildfileCache.php will use when FileCache option is enable.
 # enable read permission for anonymous user and then disable
-exec_command "*** rebuild wiki media meta data ..." \
-	php ${script_path}/maintenance/rebuildImages.php >> ${log_file}; \
-	sed -i -r 's/^\$wgGroup(.*)read/\#$wgGroup\1read/' ${script_path}/LocalSettings.php; \
-	php ${script_path}/maintenance/rebuildFileCache.php >> ${log_file}; \
-	sed -i -r 's/^#\$wgGroup(.*)read/\$wgGroup\1read/' ${script_path}/LocalSettings.php;
+if [ "$debug" != true ]; then
+	exec_command "*** rebuild wiki media meta data ..." \
+		php ${parent_path}/maintenance/rebuildImages.php >> ${log_file}; \
+		sed -i -r 's/^\$wgGroup(.*)read/\#$wgGroup\1read/' ${parent_path}/LocalSettings.php; \
+		php ${parent_path}/maintenance/rebuildFileCache.php >> ${log_file}; \
+		sed -i -r 's/^#\$wgGroup(.*)read/\$wgGroup\1read/' ${parent_path}/LocalSettings.php;
+fi
 
 # remove pid_file and work_dir before closing
 rm -f ${pid_file}

@@ -19,7 +19,7 @@
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
-mediawiki_version: 'REL1_29'
+mediawiki_version: 'REL1_35'
 
 # .. envvar:: target_host_domain
 #
@@ -34,13 +34,13 @@ target_root_password: 'secret'
 # .. envvar:: target_data_root
 #
 # Specify folder that will be use as root of user data directory
-target_data_root: '/yongxin'
+target_data_root: '/var'
 
 # .. envvar:: target_appdata_root
 #
 # Specify folder that will be use as new location of application data files
 # in case if you want to collect all appdata files in one
-target_appdata_root: '{{ target_data_root }}/private/var'
+target_appdata_root: '{{ target_data_root }}/lib'
 
 # .. envvar:: mediawiki_admin_user
 #
@@ -51,3 +51,8 @@ mediawiki_db_user: '{{ install_role_name }}'
 #
 # specify the MediaWiki databaes name
 mediawiki_db_name: 'wikidata_{{ mediawiki_uniqueid }}'
+
+# .. envvar:: mediawiki_admin_user
+#
+# Specify admin user for mediaWiki site
+mediawiki_admin_user: 'wikiAdmin'
