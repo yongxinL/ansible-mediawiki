@@ -112,7 +112,7 @@ class Uploader extends Maintenance {
 			true
 		);
 		$this->addOption( 'category-start-from',
-			'If specified, the category will start enumeration from there, not start from beginning.'
+			'If specified, the category will start enumeration from there, not start from beginning, default A. '
 				. 'For example, --category-start-from="Architecture',
 			false,
 			true
@@ -122,11 +122,6 @@ class Uploader extends Maintenance {
 			false,
 			true
 		);
-		$this->addOption( 'subkey',
-			'override keyword for specifying subpage, the title name with specified keyword will be the subpage of previous title, default sk.',
-			false,
-			true
-	);
 		$this->addOption( 'dry', "Dry run, don't import anything" );
 	}
 
@@ -191,9 +186,8 @@ class Uploader extends Maintenance {
 		$license = $this->getOption( 'license', '' );
 
 		$sourceWikiUrl = $this->getOption( 'source-wiki-url' );
-		$categoryStart = $this->getOption( 'category-start-from' );
+		$categoryStart = $this->getOption( 'category-start-from', 'A' );
 		$categoryEnd   = $this->getOption( 'category-end-to', 'ZZZZZZ' );
-		$titleSubkey   = $this->getOption( 'subkey', 'sk' );
 
 		# Initialise the category for this operation
 		$category = $this->getCategoryFromSourceWiki( $sourceWikiUrl, $categoryStart, $categoryEnd );
@@ -320,9 +314,9 @@ class Uploader extends Maintenance {
 					 */
 				}
 
-				// further analyzing and get comment from filename
+				// further analyzing and get comment from file
 				if ( !$commentText ) {
-					$commentText = $this->getFileCommentFromFile( $file, $category, $titleSubkey );
+					$commentText = $this->getFileCommentFromFile( $sourceWikiUrl, $file, $category );
 				}
 
 				# Import the file
@@ -573,14 +567,35 @@ class Uploader extends Maintenance {
 	}
 
 	/**
+	 * Check title if subpage exists
+	 *
+	 * @param string $wiki_host  
+	 * @param string $page
+	 * @return bool
+	 */
+	private function getSubpageFromSourceWiki( $wiki_host, $page ) {
+		$params = [
+			"action" 	=> "query",
+			"format"	=> "xml",
+			"titles"	=> $page
+		];
+		$url = rtrim( $wiki_host, '/' ) . '/w/api.php?' . http_build_query( $params );
+		$body = Http::get( $url, [], __METHOD__ );
+		if ( preg_match( '/missing=/', $body ) == 0 ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * return Category and extra information from file.
 	 *
+	 * @param string $wiki_host  
 	 * @param string $file  
 	 * @param array $category
-	 * @param string $titleSubkey
 	 * @return string
 	 */
-	private function getFileCommentFromFile( $file, $category, $titleSubkey ) {
+	private function getFileCommentFromFile( $wiki_host, $file, $category ) {
 		
 		$base = explode( '-', UtfNormal\Validator::cleanUp( wfBaseName( $file ) ));
 		$cat = false;
@@ -590,15 +605,15 @@ class Uploader extends Maintenance {
 
 		// build category based on date
 		if ( preg_match( '/^[0-9]{8}$/', $base[0] ) and date( 'Y', strtotime( $base[0] )) > 1970 ) {
-			$comment .= '[[Category:' . date( 'Y/0m', strtotime( $base[0] )) . ']]';
+			$comment .= '[[Category:' . date( 'Y/Y0m', strtotime( $base[0] )) . ']]';
 		} elseif ( preg_match( '/^[0-9]$/', $base[0] )) {
-			$comment .= '[[Category:' . date( 'Y/0m', strtotime( 'now' )) . ']]';
+			$comment .= '[[Category:' . date( 'Y/Y0m', strtotime( 'now' )) . ']]';
 			$offset++;
 		} else {
-			$comment .= '[[Category:' . date( 'Y/0m', strtotime( 'now' )) . ']]';
+			$comment .= '[[Category:' . date( 'Y/Y0m', strtotime( 'now' )) . ']]';
 		}
 
-		// add category based on filename
+		// add category based on file
 		if ( isset( $base[1 - $offset] )) {
 			foreach( $category as $key => $item ) {
 				foreach( explode( ' ', preg_replace( '/[^A-Za-z0-9 \-]\s/', '', $key) ) as $k => $v ) {
@@ -611,7 +626,7 @@ class Uploader extends Maintenance {
 			}
 		}
 
-		// add subcategory based on filename
+		// add subcategory based on file
 		if ( isset( $base[2 - $offset] )) {
 			if ( $cat != false ) {
 				foreach( $category[$cat] as $key => $item ) {
@@ -626,26 +641,30 @@ class Uploader extends Maintenance {
 					$comment .= '[[Category:' . str_replace(' ', '_', $subcat) . ']]';
 				} else {
 					$comment .= '[[Category:' . str_replace(' ', '_', $cat) . '/Reference]]';
-					$offset--;
+					$offset++;
 				}
 			}
 		}
 
-		// TODO: add page/subpage based on filename
-		// add page Title
+		// add page/subpage title based on file
 		if ( isset( $base[3 - $offset] )) {
-			$base[3 - $offset] = ucwords( $base[3 - $offset] );
-			$base[3 - $offset] = str_replace( '_', ' ', $base[3 - $offset] );
-			// $base[3 - $offset] = preg_replace( '/(?<!\ )[A-Z][^ ]/', ' $0', $base[3 - $offset] );
+			$comment .= '[[';
 
-			$comment .= '[[' . $this->reformat( $base[3 - $offset] ) . ']]';
+			if ( isset( $base[5 - $offset] ) && $this->getSubpageFromSourceWiki( $wiki_host, $this->reformat( $base[3 - $offset])
+				 . '/' . $this->reformat( $base[4 - $offset]) . '/' . $this->reformat( $base[5 - $offset] ))
+			) {
+				$comment .= $this->reformat( $base[3 - $offset]) . '/' . $this->reformat( $base[4 - $offset]) . '/' . $this->reformat( $base[5 - $offset]);
+			} elseif ( isset( $base[ 4 - $offset] ) && $this->getSubpageFromSourceWiki( $wiki_host, $this->reformat( $base[3 - $offset])
+				 . '/' . $this->reformat( $base[4 - $offset] ))
+			) {
+					$comment .= $this->reformat( $base[3 - $offset]) . '/' . $this->reformat( $base[4 - $offset]);
+			} else {
+				$comment .= $this->reformat( $base[3 - $offset]);
+			}
+
+			$comment .= ']]';
 		}
-		// TODO:
-		// add page/subpage based on filename
-		// for( $iCtr = 3 - $offset, $baseCnt = count( $base ); $iCtr < $baseCnt; ++$iCtr ) {
-		// 		echo( 'name is going to be analysis : ' . $base[ $iCtr] . "\n\n");
-		// 	ucfirst( preg_replace('/(?<!\ )[A-Z][^ ]/', '_$0', $string))
-		// }
+
 		return $comment;
 	}
 
@@ -660,12 +679,12 @@ class Uploader extends Maintenance {
 	 * @param string $file  
 	 * @return string
 	 */
-	private function reformat( $title ) {
-		$title = preg_replace( '/\W+/', ' ', $title );						// see regex 1
-		$title = preg_replace( '/(?<=[a-z])(?=[A-Z])/', ' ', $title );		// see regex 3
-		$title = ucwords( $title );											// uppercase the first character of each word
-		$title = str_replace( ' ', '_', $title );							// replace space with '_'
-		return $title;
+	private function reformat( $page ) {
+		$page = preg_replace( '/\W+/', ' ', $page );						// see regex 1
+		$page = preg_replace( '/(?<=[a-z])(?=[A-Z])/', ' ', $page );		// see regex 3
+		$page = ucwords( $page );											// uppercase the first character of each word
+		$page = str_replace( ' ', '_', $page );								// replace space with '_'
+		return $page;
 	}
 }
 
