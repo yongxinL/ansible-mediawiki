@@ -225,12 +225,14 @@ class Uploader extends Maintenance
 				}
 
 				$base = UtfNormal\Validator::cleanUp(wfBaseName($file));
+				$strbase = (strlen($base) > 70) ? substr($base, 0, 37) . '...' . substr($base, strlen($base)-30, 30) : $base;
+				$strFile = (strlen($file) > 70) ? substr($file, 0, 37) . '...' . substr($file, strlen($file)-30, 30) : $file;
 
 				# Validate a title
 				$title = Title::makeTitleSafe(NS_FILE, $base);
 				if (!is_object($title)) {
 					$this->output(
-						"{$base} could not be imported; a valid title cannot be produced\n"
+						"{$strbase} could not be imported; a valid title cannot be produced\n"
 					);
 					continue;
 				}
@@ -260,10 +262,10 @@ class Uploader extends Maintenance
 					->newFile($title);
 				if ($image->exists()) {
 					if ($this->hasOption('overwrite')) {
-						$this->output("{$base} exists, overwriting...");
+						$this->output("{$strbase} exists, overwriting...");
 						$svar = 'overwritten';
 					} else {
-						$this->output("{$base} exists, skipping\n");
+						$this->output("Importing {$strbase} exists, skipping\n");
 						$skipped++;
 						continue;
 					}
@@ -277,14 +279,14 @@ class Uploader extends Maintenance
 
 						if ($dupes) {
 							$this->output(
-								"{$base} already exists as {$dupes[0]->getName()}, skipping\n"
+								"{$strbase} already exists as {$dupes[0]->getName()}, skipping\n"
 							);
 							$skipped++;
 							continue;
 						}
 					}
 
-					$this->output("Importing {$base}...\n");
+					$this->output("Importing {$strbase}...");
 					$svar = 'added';
 				}
 
@@ -306,7 +308,7 @@ class Uploader extends Maintenance
 						if ($wgUser === false) {
 							# user does not exist in target wiki
 							$this->output(
-								"failed: user '$real_user' does not exist in target wiki."
+								"\n failed: user '$real_user' does not exist in target wiki."
 							);
 							continue;
 						}
@@ -318,13 +320,13 @@ class Uploader extends Maintenance
 					if ($commentExt) {
 						$f = $this->findAuxFile($file, $commentExt);
 						if (!$f) {
-							$this->output(" No comment file with extension {$commentExt} found "
+							$this->output("\n No comment file with extension {$commentExt} found "
 								. "for {$file}, using default comment. ");
 						} else {
 							$commentText = file_get_contents($f);
 							if (!$commentText) {
 								$this->output(
-									" Failed to load comment file {$f}, using default comment. "
+									"\n Failed to load comment file {$f}, using default comment. "
 								);
 							}
 						}
@@ -343,9 +345,8 @@ class Uploader extends Maintenance
 
 				# Import the file
 				if ($this->hasOption('dry')) {
-					$strFile = (strlen($file) > 57) ? substr($file, 0, 57) . '...' : $file;
 					$this->output(
-						" publishing {$strFile} by '{$wgUser->getName()}',\n comment '$commentText'... "
+						"\n publishing {$strFile} by '{$wgUser->getName()}',\n comment '$commentText'... "
 					);
 				} else {
 					$mwProps = new MWFileProps(MediaWiki\MediaWikiServices::getInstance()->getMimeAnalyzer());
@@ -362,7 +363,7 @@ class Uploader extends Maintenance
 					}
 					$archive = $image->publish($file, $flags, $publishOptions);
 					if (!$archive->isGood()) {
-						$this->output("failed. (" .
+						$this->output("\nfailed. (" .
 							$archive->getMessage(false, false, 'en')->text() .
 							")\n");
 						$failed++;
@@ -376,7 +377,7 @@ class Uploader extends Maintenance
 				}
 
 				if ($this->hasOption('dry')) {
-					$this->output("done.\n");
+					$this->output(" done.\n");
 				} elseif ($image->recordUpload2(
 					$archive->value,
 					$summary,
