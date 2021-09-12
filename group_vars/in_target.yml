@@ -19,12 +19,12 @@
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
-mediawiki_version: 'REL1_35'
+mediawiki_version: 'REL1_36'
 
 # .. envvar:: target_host_domain
 #
 # Specify hostname and domain that should be set in the target image.
-target_host_domain: 'lifamilylife.com'
+target_host_domain: 'domain.local'
 
 # .. envvar:: target_root_password
 #
@@ -55,4 +55,4 @@ mediawiki_db_name: 'wikidata_{{ mediawiki_uniqueid }}'
 # .. envvar:: mediawiki_admin_user
 #
 # Specify admin user for mediaWiki site
-mediawiki_admin_user: 'wikiAdmin'
+mediawiki_admin_user: 'wikiadmin'

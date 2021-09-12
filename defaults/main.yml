@@ -25,12 +25,12 @@ install_role_name: 'mediawiki'
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
-mediawiki_version: 'REL1_35'
+mediawiki_version: 'REL1_36'
 
 # .. envvar:: target_host_domain
 #
 # Specify hostname and domain that should be set in the target image.
-target_host_domain: 'lifamilylife.com'
+target_host_domain: 'domain.local'
 
 # .. envvar:: mediawiki_uniqueid
 #
@@ -148,6 +148,7 @@ mediawiki_core_extensions:
   - { name: 'Interwiki', type: 'wfload', enabled: 'yes' }                       # adds the "Special:Interwiki" page to MediaWiki, to view and edit the interwiki table
   - { name: 'LocalisationUpdate', type: 'wfload', enabled: 'yes' }              # allows to update the locations for MediaWiki message without upgrade the MediaWiki
   - { name: 'Math', type: 'wfload', enabled: 'yes' }                            # allows to render mathematical formulas
+  - { name: 'MobileFrontend', type: 'wfload', enabled: 'yes' }                  # provides a mobile-friendly view
   - { name: 'MultimediaViewer', type: 'wfload', enabled: 'yes' }                # provides a better experience to users when they click on thumbnails in a page
   - { name: 'OpenIDConnect', type: 'wfload', enabled: 'yes' }                   # extends the PluggableAuth extension to provide authentication using OpenID Connect
   - { name: 'PdfHandler', type: 'wfload', enabled: 'yes' }                      # allows to handle PDF files
@@ -169,9 +170,9 @@ mediawiki_core_extensions:
 #
 # List of skins will be download from 3rd-party repository
 mediawiki_3rdparty_extensions:
-  - { name: 'DynamicPageList', repo: 'https://gitlab.com/hydrawiki/extensions/DynamicPageList.git', version: '8bd092ae', type: 'wfload' }      # Create lists of other articles based on their category etc.
+  - { name: 'DynamicPageList3', repo: 'https://github.com/Universal-Omega/DynamicPageList3.git', version: '7e87a40', type: 'wfload' }     # Create lists of other articles based on their category etc.
   - { name: 'EmbedVideo', repo: 'https://gitlab.com/hydrawiki/extensions/EmbedVideo.git', version: '4420fd61', type: 'wfload' }   # embedding video clips from over 24 popular video sharing services
-  - { name: 'PDFEmbed', repo: 'https://gitlab.com/hydrawiki/extensions/PDFEmbed.git', version: '5e1a535e', type: 'wfload' }                 # allows Adobe Acrobat PDF files to be embedded into a wiki article using tags
+  - { name: 'PDFEmbed', repo: 'https://gitlab.com/hydrawiki/extensions/PDFEmbed.git', version: '5ee5c22b', type: 'wfload' }                 # allows Adobe Acrobat PDF files to be embedded into a wiki article using tags
   - { name: 'MW-OAuth2Client', repo: 'https://github.com/Schine/MW-OAuth2Client.git', version: 'master', type: 'wfload' }       # allow MediaWiki to act as a client to any OAuth2 server
 
 # .. envvar:: mediawiki_3rdparty_submodule
@@ -210,7 +211,6 @@ mediawiki_customization:
   - { name: 'mediawiki-systemMaint.sh', dest: '{{ mediawiki_root }}/conf.d/systemMaint.sh', mode: '0755' }
   - { name: 'mediawiki-functions.bash', dest: '{{ mediawiki_root }}/functions.bash', mode: '0644' }
   - { name: 'maintenance-uploader.php', dest: '{{ mediawiki_root }}/maintenance/uploader.php', mode: '0644' }
-  #- { name: 'mediawiki-wikiUploader.sh', dest: '{{ mediawiki_root }}/conf.d/wikiUploader.sh', mode: '0755' }
    
 
 # .. envvar:: mediawiki_configuration
