@@ -41,7 +41,7 @@ mediawiki_uniqueid: "wiki"
 # .. envvar:: mediawiki_server
 #
 # Specify server name to use for MediaWiki
-mediawiki_server: "{{ mediawiki_uniqueid }}.{{ target_host_domain }}"
+mediawiki_server: "{{ target_host_domain }}"
 
 # .. envvar:: mediawiki_server
 #

@@ -1,8 +1,9 @@
 # =============================================================================
 #
-# - Copyright (C) 2016     George Li <yongxinl@outlook.com>
+# - This is part of Lifamily Library (Wiki) project
 #
-# - This is part of HomeVault imagebuilder project.
+# - Copyright (C) 2010-2021     George Li <yongxinl@outlook.com>
+#
 # - This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -12,47 +13,38 @@
 # Default group variables
 # =================
 
-# .. contents:: Sections
-#    :local:
-#
-
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
-mediawiki_version: 'REL1_36'
+mediawiki_version: "REL1_36"
 
 # .. envvar:: target_host_domain
 #
 # Specify hostname and domain that should be set in the target image.
-target_host_domain: 'domain.local'
+target_host_domain: "domain.local"
 
 # .. envvar:: target_root_password
 #
 # Specify root password
-target_root_password: 'secret'
-
-# .. envvar:: target_data_root
-#
-# Specify folder that will be use as root of user data directory
-target_data_root: '/var'
+target_root_password: "secret"
 
 # .. envvar:: target_appdata_root
 #
 # Specify folder that will be use as new location of application data files
 # in case if you want to collect all appdata files in one
-target_appdata_root: '{{ target_data_root }}/lib'
+target_appdata_root: "/var/lib"
 
 # .. envvar:: mediawiki_admin_user
 #
 # Specify admin user for mediaWiki site
-mediawiki_db_user: '{{ install_role_name }}'
+mediawiki_db_user: "{{ install_role_name }}"
 
 # .. envvar:: mediawiki_db_name
 #
 # specify the MediaWiki databaes name
-mediawiki_db_name: 'wikidata_{{ mediawiki_uniqueid }}'
+mediawiki_db_name: "wik_{{ mediawiki_uniqueid }}"
 
 # .. envvar:: mediawiki_admin_user
 #
 # Specify admin user for mediaWiki site
-mediawiki_admin_user: 'wikiadmin'
+mediawiki_admin_user: "wikiadmin"
