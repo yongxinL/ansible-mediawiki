@@ -1,7 +1,8 @@
 #!/bin/bash
 # =============================================================================
+# - This is part of Lifamily Library (Wiki) project
 #
-# - Copyright (C) 2017     George Li <yongxinl@outlook.com>
+# - Copyright (C) 2010-2021     George Li <yongxinl@outlook.com>
 #
 # - This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of

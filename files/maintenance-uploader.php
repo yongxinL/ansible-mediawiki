@@ -1,8 +1,13 @@
 <?php
-
 /**
- * Copyright (C) 2021     George Li <yongxinl@outlook.com>
  * This is part of Lifamily Library (Wiki) project 
+ * 
+ * Copyright (C) 2010-2021     George Li <yongxinl@outlook.com>
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  * 
  * Upload one or more images from the local file system into the wiki without
  * using the web-based interface.
@@ -15,10 +20,7 @@
  *      - fetch metadata from source wiki for each file to import.
  *      - commit the fetched metadata to the destination wiki while submitting.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+
  * *
  * @author George Li <yongxinL@outlook.com>
  */

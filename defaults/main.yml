@@ -1,8 +1,9 @@
 # =============================================================================
 #
-# - Copyright (C) 2017     George Li <yongxinl@outlook.com>
+# - This is part of Lifamily Library (Wiki) project
 #
-# - This is part of HomeVault imagebuilder project.
+# - Copyright (C) 2010-2021     George Li <yongxinl@outlook.com>
+#
 # - This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -20,215 +21,266 @@
 # ------------------------------------
 #   Packages and installation
 # ------------------------------------
-install_role_name: 'mediawiki'
+install_role_name: "mediawiki"
 
 # .. envvar:: mediawiki_version
 #
 # specify the MediaWiki version clone from repository
-mediawiki_version: 'REL1_36'
+mediawiki_version: "REL1_36"
 
 # .. envvar:: target_host_domain
 #
 # Specify hostname and domain that should be set in the target image.
-target_host_domain: 'domain.local'
+target_host_domain: "domain.local"
 
 # .. envvar:: mediawiki_uniqueid
 #
 # Specify mediaiwki uniqueid
-mediawiki_uniqueid: 'wiki'
+mediawiki_uniqueid: "wiki"
 
 # .. envvar:: mediawiki_server
 #
 # Specify server name to use for MediaWiki
-mediawiki_server: '{{ mediawiki_uniqueid }}.{{ target_host_domain }}'
+mediawiki_server: "{{ mediawiki_uniqueid }}.{{ target_host_domain }}"
 
 # .. envvar:: mediawiki_server
 #
 # Specify server name to use for MediaWiki
-mediawiki_sitename: 'Library'
+mediawiki_sitename: "Library"
 
 # .. envvar:: mediawiki_db_name
 #
 # specify the MediaWiki databaes name
-mediawiki_db_name: 'wikidata_{{ mediawiki_uniqueid }}'
+mediawiki_db_name: "wikidata_{{ mediawiki_uniqueid }}"
 
 # .. envvar:: mediawiki_db_user
 #
 # specify the MediaWiki databaes user
-mediawiki_db_user: '{{ install_role_name }}'
+mediawiki_db_user: "{{ install_role_name }}"
 
 # .. envvar:: target_root_password
 #
 # Specify root password for both of os and database
-target_root_password: 'secret'
+target_root_password: "secret"
 
 # .. envvar:: mediawiki_admin_user
 #
 # Specify admin user for mediaWiki site
-mediawiki_admin_user: 'wikiadmin'
+mediawiki_admin_user: "wikiadmin"
 
 # .. envvar:: mediawiki_admin_password
 #
 # Specify admin password for mediaWiki site
-mediawiki_admin_password: '{{ target_root_password }}'
+mediawiki_admin_password: "{{ target_root_password }}"
 
 # .. envvar:: mediawiki_admin_email
 #
 # Specify admin email for mediaWiki site
-mediawiki_admin_email: 'webmaster@{{ target_host_domain }}'
+mediawiki_admin_email: "webmaster@{{ target_host_domain }}"
 
 # .. envvar:: mediawiki_logo
 #
 # Specify log file for mediaWiki site, add $wgResourceBasePath in the front
-mediawiki_logo: '$wgResourceBasePath/images/wikipedia_logo.png'
+mediawiki_logo: "$wgResourceBasePath/images/wikipedia_logo.png"
 
 # .. envvar:: mediawiki_startdate
 #
 # Specify the date for starting the Wiki
-mediawiki_startdate: 'Oct 11 2017'
+mediawiki_startdate: "Oct 11 2017"
 
 # .. envvar:: target_appdata_root
 #
 # Specify folder that will be use as new location of application data files
 # in case if you want to collect all appdata files in one
-target_appdata_root: '/var/lib'
+target_appdata_root: "/var/lib"
 
 # .. envvar:: php_ver
 #
 # Specify version of PHP that will be use to update the php.ini
-php_ver: '7.4'
+php_ver: "7.4"
 
 # .. envvar:: mediawiki_ScriptPath          = 'w' for dedicated domain or 'subdir' for under subdirectory
 # .. envvar:: mediaiwki_ArticlePath         = 'wiki' or 'alias name'
 #
 # Specify options for MediaWiki site
-mediawiki_ScriptPath : 'w'
-mediaiwki_ArticlePath : 'wiki'
+mediawiki_ScriptPath: "w"
+mediaiwki_ArticlePath: "wiki"
 
 # .. envvar:: mediawiki_root
 #
 # Specify folder that will be use as new location of application data files
 # in case if you want to collect all appdata files in one
-mediawiki_root: '{{ target_appdata_root }}/wiki'
+mediawiki_root: "{{ target_appdata_root }}/w"
 
 # .. envvar:: mediawiki_base_packages
 #
 # List of required Linux packages for Mediawiki
 mediawiki_base_packages:
-  - 'git'
-  - 'openssl'
+    - "git"
+    - "openssl"
 
 # .. envvar:: mediawiki_core_skins
 #
 # List of skins will be download from MediaWiki repository
 mediawiki_core_skins:
-  - { name: 'Vector', type: 'wfload' }
+    - { name: "Vector", type: "wfload" }
 
 # .. envvar:: mediawiki_3rdparty_skins
 #
 # List of skins will be download from 3rd-party repository
-mediawiki_3rdparty_skins: []
-# - { name: 'foreground', repo: 'https://github.com/thingles/foreground.git', version: '6757cbb', type: 'wfload' }
+mediawiki_3rdparty_skins:
+    - {
+          name: "Library",
+          repo: "https://github.com/yongxinL/mediawiki-skins-Library.git",
+          version: "master",
+          type: "wfload",
+      }
 
 # .. envvar:: mediawiki_core_extensions
 #
 # List of skins will be download from MediaWiki repository, load with $wfLoadExtension
 mediawiki_core_extensions:
-  - { name: 'CategoryTree', type: 'wfload', enabled: 'yes' }                    # provides a dynamic view of the wiki's catagory structure as a tree
-  - { name: 'CirrusSearch', type: 'wfload', enabled: 'no' }                     # implements searching for MediaWiki using ElasticSearch
-  - { name: 'Cite', type: 'wfload', enabled: 'yes' }                            # allows footnotes for citing sources and helps for correctly citing content in offline media
-  - { name: 'CiteThisPage', type: 'wfload', enabled: 'yes' }                    # adds a special page that provides different citation format
-  - { name: 'CodeEditor', type: 'wfload', enabled: 'yes' }                      # provides a syntax-highlighting code editor for site
-  - { name: 'ConfirmEdit', type: 'wfload', enabled: 'yes' }                     # adds CAPTCHAs for page savers and other user actions
-  - { name: 'Echo', type: 'wfload', enabled: 'yes' }                            # provides an in-wiki notification system that can be used by other extensions
-  - { name: 'Elastica', type: 'wfload', enabled: 'yes' }                        # provides base ElasticSearch functionality
-  - { name: 'Flow', type: 'wfload', enabled: 'no' }                             # provides a discussion and collaboration system for talk pages
-  - { name: 'ImageMap', type: 'wfload', enabled: 'yes' }                        # allows clickable image maps
-  - { name: 'InputBox', type: 'wfload', enabled: 'yes' }                        # allows users to add predefined HTML forms
-  - { name: 'Interwiki', type: 'wfload', enabled: 'yes' }                       # adds the "Special:Interwiki" page to MediaWiki, to view and edit the interwiki table
-  - { name: 'LocalisationUpdate', type: 'wfload', enabled: 'yes' }              # allows to update the locations for MediaWiki message without upgrade the MediaWiki
-  - { name: 'Math', type: 'wfload', enabled: 'yes' }                            # allows to render mathematical formulas
-  - { name: 'MobileFrontend', type: 'wfload', enabled: 'yes' }                  # provides a mobile-friendly view
-  - { name: 'MultimediaViewer', type: 'wfload', enabled: 'yes' }                # provides a better experience to users when they click on thumbnails in a page
-  - { name: 'OpenIDConnect', type: 'wfload', enabled: 'yes' }                   # extends the PluggableAuth extension to provide authentication using OpenID Connect
-  - { name: 'PdfHandler', type: 'wfload', enabled: 'yes' }                      # allows to handle PDF files
-  - { name: 'ParserFunctions', type: 'wfload', enabled: 'yes' }                 # enhances parser with logical and string functions
-  - { name: 'PageImages', type: 'wfload', enabled: 'yes' }                      # collect information about images used on a page. required by PopUp extension, require beofre 1.28
-  - { name: 'PluggableAuth', type: 'wfload', enabled: 'yes' }                   # provides a framework for creating authentication and authentication extensions
-  - { name: 'Popups', type: 'wfload', enabled: 'yes' }                          # displays "hovercards" popups with summaries of article contents
-  - { name: 'ReplaceText', type: 'wfload', enabled: 'yes' }                     # provides a form to let admin do string replacement on the entire wiki
-  - { name: 'Scribunto', type: 'wfload', enabled: 'yes' }                       # allws for embedding scripting language in MediaWiki.
-  - { name: 'SpamBlacklist', type: 'wfload', enabled: 'yes' }                   # prevents edits that contain URLs whose domains match regular expression patterns
-  - { name: 'SyntaxHighlight_GeSHi', type: 'wfload', enabled: 'yes' }           # provides rich formating of source code using the <syntaxhighlight> tag - can be REPLACE with Highlightjs_Integration
-  - { name: 'TemplateData', type: 'wfload', enabled: 'yes' }                    # allows to store, retrieve and visualise information about template
-  - { name: 'TextExtracts', type: 'wfload', enabled: 'yes' }                    # provides an API with allows to retrieve plain-text. required by PopUp extension
-  - { name: 'TitleBlacklist', type: 'wfload', enabled: 'yes' }                  # allows wiki administrators to block the creation, movement and upload of pages
-  - { name: 'VisualEditor', type: 'wfload', enabled: 'yes' }                    # provides a reliable rich-text editor for Mediawiki, Parsoid service is required.
-  - { name: 'WikiEditor', type: 'wfload', enabled: 'yes' }                      # provides an improved interface for editing wikitext  
+    - { name: "CategoryTree", type: "wfload", enabled: "yes" } # provides a dynamic view of the wiki's catagory structure as a tree
+    - { name: "CirrusSearch", type: "wfload", enabled: "no" } # implements searching for MediaWiki using ElasticSearch
+    - { name: "Cite", type: "wfload", enabled: "yes" } # allows footnotes for citing sources and helps for correctly citing content in offline media
+    - { name: "CiteThisPage", type: "wfload", enabled: "yes" } # adds a special page that provides different citation format
+    - { name: "CodeEditor", type: "wfload", enabled: "yes" } # provides a syntax-highlighting code editor for site
+    - { name: "ConfirmEdit", type: "wfload", enabled: "yes" } # adds CAPTCHAs for page savers and other user actions
+    - { name: "Echo", type: "wfload", enabled: "yes" } # provides an in-wiki notification system that can be used by other extensions
+    - { name: "Elastica", type: "wfload", enabled: "yes" } # provides base ElasticSearch functionality
+    - { name: "Flow", type: "wfload", enabled: "no" } # provides a discussion and collaboration system for talk pages
+    - { name: "ImageMap", type: "wfload", enabled: "yes" } # allows clickable image maps
+    - { name: "InputBox", type: "wfload", enabled: "yes" } # allows users to add predefined HTML forms
+    - { name: "Interwiki", type: "wfload", enabled: "yes" } # adds the "Special:Interwiki" page to MediaWiki, to view and edit the interwiki table
+    - { name: "LocalisationUpdate", type: "wfload", enabled: "yes" } # allows to update the locations for MediaWiki message without upgrade the MediaWiki
+    - { name: "Math", type: "wfload", enabled: "yes" } # allows to render mathematical formulas
+    - { name: "MobileFrontend", type: "wfload", enabled: "yes" } # provides a mobile-friendly view
+    - { name: "MultimediaViewer", type: "wfload", enabled: "yes" } # provides a better experience to users when they click on thumbnails in a page
+    - { name: "OpenIDConnect", type: "wfload", enabled: "no" } # extends the PluggableAuth extension to provide authentication using OpenID Connect
+    - { name: "PdfHandler", type: "wfload", enabled: "yes" } # allows to handle PDF files
+    - { name: "ParserFunctions", type: "wfload", enabled: "yes" } # enhances parser with logical and string functions
+    - { name: "PageImages", type: "wfload", enabled: "yes" } # collect information about images used on a page. required by PopUp extension, require beofre 1.28
+    - { name: "PluggableAuth", type: "wfload", enabled: "no" } # provides a framework for creating authentication and authentication extensions
+    - { name: "Popups", type: "wfload", enabled: "yes" } # displays "hovercards" popups with summaries of article contents
+    - { name: "ReplaceText", type: "wfload", enabled: "yes" } # provides a form to let admin do string replacement on the entire wiki
+    - { name: "Scribunto", type: "wfload", enabled: "yes" } # allws for embedding scripting language in MediaWiki.
+    - { name: "SpamBlacklist", type: "wfload", enabled: "yes" } # prevents edits that contain URLs whose domains match regular expression patterns
+    - { name: "SyntaxHighlight_GeSHi", type: "wfload", enabled: "yes" } # provides rich formating of source code using the <syntaxhighlight> tag - can be REPLACE with Highlightjs_Integration
+    - { name: "TemplateData", type: "wfload", enabled: "yes" } # allows to store, retrieve and visualise information about template
+    - { name: "TextExtracts", type: "wfload", enabled: "yes" } # provides an API with allows to retrieve plain-text. required by PopUp extension
+    - { name: "TitleBlacklist", type: "wfload", enabled: "yes" } # allows wiki administrators to block the creation, movement and upload of pages
+    - { name: "VisualEditor", type: "wfload", enabled: "yes" } # provides a reliable rich-text editor for Mediawiki, Parsoid service is required.
+    - { name: "WikiEditor", type: "wfload", enabled: "yes" } # provides an improved interface for editing wikitext
 
 # .. envvar:: mediawiki_3rdparty_extensions
 #
 # List of skins will be download from 3rd-party repository
 mediawiki_3rdparty_extensions:
-  - { name: 'DynamicPageList3', repo: 'https://github.com/Universal-Omega/DynamicPageList3.git', version: '7e87a40', type: 'wfload' }     # Create lists of other articles based on their category etc.
-  - { name: 'EmbedVideo', repo: 'https://gitlab.com/hydrawiki/extensions/EmbedVideo.git', version: '4420fd61', type: 'wfload' }   # embedding video clips from over 24 popular video sharing services
-  - { name: 'PDFEmbed', repo: 'https://gitlab.com/hydrawiki/extensions/PDFEmbed.git', version: '5ee5c22b', type: 'wfload' }                 # allows Adobe Acrobat PDF files to be embedded into a wiki article using tags
-  - { name: 'MW-OAuth2Client', repo: 'https://github.com/Schine/MW-OAuth2Client.git', version: 'master', type: 'wfload' }       # allow MediaWiki to act as a client to any OAuth2 server
+    - {
+          name: "DynamicPageList3",
+          repo: "https://github.com/Universal-Omega/DynamicPageList3.git",
+          version: "7e87a40",
+          type: "wfload",
+      } # Create lists of other articles based on their category etc.
+    - {
+          name: "EmbedVideo",
+          repo: "https://github.com/StarCitizenWiki/mediawiki-extensions-EmbedVideo.git",
+          version: "76cefce",
+          type: "wfload",
+      } # embedding video clips from over 24 popular video sharing services
+    - {
+          name: "PDFEmbed",
+          repo: "https://gitlab.com/hydrawiki/extensions/PDFEmbed.git",
+          version: "5ee5c22b",
+          type: "wfload",
+      } # allows Adobe Acrobat PDF files to be embedded into a wiki article using tags
+    - {
+          name: "MW-OAuth2Client",
+          repo: "https://github.com/Schine/MW-OAuth2Client.git",
+          version: "master",
+          type: "wfload",
+      } # allow MediaWiki to act as a client to any OAuth2 server
 
 # .. envvar:: mediawiki_3rdparty_submodule
 #
 # List of extensions need to be initialize by git submodule
 mediawiki_3rdparty_submodule:
-  - { name: 'MW-OAuth2Client' }
+    - { name: "MW-OAuth2Client" }
 
 # .. envvar:: mediawiki_extension_dependency
 #
 # List of extensions need to be initialize by composer
 mediawiki_extension_dependency:
-  - { name: 'Elastica' }
-  - { name: 'OpenIDConnect' }
-  - { name: 'SyntaxHighlight_GeSHi' }
-  - { name: 'MW-OAuth2Client/vendors/oauth2-client' }
+    - { name: "Elastica" }
+    - { name: "Flow" }
+    - { name: "OpenIDConnect" }
+    - { name: "SyntaxHighlight_GeSHi" }
+    - { name: "MW-OAuth2Client/vendors/oauth2-client" }
 
 # .. envvar:: mediawiki_core_services
 #
 # List of core services need for MediaWiki
 mediawiki_core_services:
-  - { name: 'parsoid', version: 'master' }                # reliable rich-text editor for the Web and wiki
+    - { name: "parsoid", version: "master" } # reliable rich-text editor for the Web and wiki
 
 # .. envvar:: mediawiki_extensions_3rdparty
 #
 # List of extensions will be install/update by php composer
 mediawiki_extension_bycomposer: []
-# - { name: 'mediawiki/bootstrap-components', version: '1.2.3' } 
+# - { name: 'mediawiki/bootstrap-components', version: '1.2.3' }
 
 # .. envvar:: mediawiki_customization
 #
 # List of configuration file will be copy to Linux base filesystems
 mediawiki_customization:
-  - { name: 'images/', dest: '{{ mediawiki_root }}/images/' }
-  - { name: 'mediawiki-searchEngine.sh', dest: '{{ mediawiki_root }}/conf.d/searchEngine.sh', mode: '0755' }
-  - { name: 'mediawiki-systemMaint.sh', dest: '{{ mediawiki_root }}/conf.d/systemMaint.sh', mode: '0755' }
-  - { name: 'mediawiki-functions.bash', dest: '{{ mediawiki_root }}/functions.bash', mode: '0644' }
-  - { name: 'maintenance-uploader.php', dest: '{{ mediawiki_root }}/maintenance/uploader.php', mode: '0644' }
-   
+    - { name: "images/", dest: "{{ mediawiki_root }}/images/" }
+    - {
+          name: "mediawiki-searchEngine.sh",
+          dest: "{{ mediawiki_root }}/conf.d/searchEngine.sh",
+          mode: "0755",
+      }
+    - {
+          name: "mediawiki-systemMaint.sh",
+          dest: "{{ mediawiki_root }}/conf.d/systemMaint.sh",
+          mode: "0755",
+      }
+    - {
+          name: "mediawiki-functions.bash",
+          dest: "{{ mediawiki_root }}/functions.bash",
+          mode: "0644",
+      }
+    - {
+          name: "maintenance-uploader.php",
+          dest: "{{ mediawiki_root }}/maintenance/uploader.php",
+          mode: "0644",
+      }
 
 # .. envvar:: mediawiki_configuration
 #
 # List of configuration file will be copy to Linux base filesystems
 mediawiki_configuration:
-  - { name: 'etc-nginx-confd-wiki-httpd.conf.j2', dest: '{{ mediawiki_root }}/conf.d/wiki-httpd.conf' }
-  - { name: 'etc-nginx-confd-wiki-https.conf.j2', dest: '{{ mediawiki_root }}/conf.d/wiki-https.conf' }
-  - { name: 'etc-nginx-confd-wiki-subdir.conf.j2', dest: '{{ mediawiki_root }}/conf.d/wiki-subdir.conf' }
-  - { name: 'etc-nginx-confd-wiki-common.ini.j2', dest: '{{ mediawiki_root }}/conf.d/wiki-common.ini' }
-  - { name: 'mediawiki-LocalSettings.php.j2', dest: '{{ mediawiki_root }}/LocalSettings.php' }
-  - { name: 'mediawiki-docker-compose.yml.j2', dest: '{{ mediawiki_root }}/docker-compose.yml', mode: '0755' }
-
-# .. envvar:: parsoid_configuration
-#
-# List of configuration file will be copy to Linux base filesystems
-parsoid_configuration:
-  - { name: 'services-parsoid-config.yaml.j2', dest: '{{ mediawiki_root }}/conf.d/config.yaml' }
-  - { name: 'services-parsoid-config.yaml.j2', dest: '{{ mediawiki_root }}/services/parsoid/config.yaml' }
-  - { name: 'etc-systemd-system-parsoid.service.j2', dest: '/etc/systemd/system/parsoid.service', mode: '0755' }
-  - { name: 'etc-systemd-system-parsoid.service.j2', dest: '{{ mediawiki_root }}/conf.d/parsoid.service', mode: '0755' }
+    - {
+          name: "etc-nginx-confd-wiki-httpd.conf.j2",
+          dest: "{{ mediawiki_root }}/conf.d/wiki-httpd.conf",
+      }
+    - {
+          name: "etc-nginx-confd-wiki-https.conf.j2",
+          dest: "{{ mediawiki_root }}/conf.d/wiki-https.conf",
+      }
+    - {
+          name: "etc-nginx-confd-wiki-subdir.conf.j2",
+          dest: "{{ mediawiki_root }}/conf.d/wiki-subdir.conf",
+      }
+    - {
+          name: "etc-nginx-confd-wiki-common.ini.j2",
+          dest: "{{ mediawiki_root }}/conf.d/wiki-common.ini",
+      }
+    - {
+          name: "mediawiki-LocalSettings.php.j2",
+          dest: "{{ mediawiki_root }}/LocalSettings.php",
+      }
+    - {
+          name: "mediawiki-docker-compose.yml.j2",
+          dest: "{{ mediawiki_root }}/docker-compose.yml",
+          mode: "0755",
+      }

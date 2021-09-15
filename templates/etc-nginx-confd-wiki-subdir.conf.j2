@@ -1,0 +1,31 @@
+# nginx configuration for mediawiki under subdirectory: {{ mediawiki_server }}
+#
+# - This is part of Lifamily Library (Wiki) project
+#
+# - Copyright (C) 2010-2021     George Li <yongxinl@outlook.com>
+#
+
+location /w/ {
+
+}
+
+# Do this inside of a location so it can be negated
+location ~ ^/w/(.+\.php5)$ {
+    fastcgi_pass                php_upstream;
+    fastcgi_param               SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    include                     /etc/nginx/fastcgi_params;
+    fastcgi_intercept_errors    on;
+}
+
+location ~ ^/w/(.+\.php)$ {
+    fastcgi_pass                php_upstream;
+    fastcgi_param               SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    include                     /etc/nginx/fastcgi_params;
+    fastcgi_intercept_errors    on;
+}
+
+# Common settings for a wiki powered by MediaWiki with the following configuration
+# 1. wiki is location in $root/w folder
+# 2. article path ($wgArticlePath) is "/wiki/$1"
+# 3. $wgUsePathInfo is true
+include {{ mediawiki_root }}/conf.d/wiki-common.ini;

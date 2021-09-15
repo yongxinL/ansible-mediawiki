@@ -2,10 +2,14 @@
 # =============================================================================
 # - bash function Library
 # 
-# - Copyright (C) 2017 George Li <yongxinl@outlook.com>
+# - This is part of Lifamily Library (Wiki) project
 #
 # - Author: George Li (yongxinL@outlook.com)
-# - http://github.com/yongxinL/docker
+# - http://github.com/yongxinL
+#
+# - Copyright (C) 2010-2021     George Li <yongxinl@outlook.com>
+#
+# - This is part of HomeVault imagebuilder project.
 # - This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
