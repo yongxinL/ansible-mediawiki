@@ -10,7 +10,6 @@
 #
 # =============================================================================
 #
-# todo: verify VisualEditor / parsoid configuration
 
 # Default variables
 # =================
@@ -171,7 +170,8 @@ mediawiki_core_extensions:
     - { name: "TitleBlacklist", type: "wfload", enabled: "yes" } # allows wiki administrators to block the creation, movement and upload of pages
     - { name: "VisualEditor", type: "wfload", enabled: "yes" } # provides a reliable rich-text editor for Mediawiki, Parsoid service is required.
     - { name: "WikiEditor", type: "wfload", enabled: "yes" } # provides an improved interface for editing wikitext
-
+    - { name: "WSOAuth", type: "wfload", enabled: "no" } # extends the PluggableAuth extension to provide authentication using an oAuth provider.
+    
 # .. envvar:: mediawiki_3rdparty_extensions
 #
 # List of skins will be download from 3rd-party repository
@@ -216,6 +216,7 @@ mediawiki_extension_dependency:
     - { name: "OpenIDConnect" }
     - { name: "SyntaxHighlight_GeSHi" }
     - { name: "MW-OAuth2Client/vendors/oauth2-client" }
+    - { name: "WSOAuth" }
 
 # .. envvar:: mediawiki_core_services
 #
@@ -227,7 +228,6 @@ mediawiki_core_services:
 #
 # List of extensions will be install/update by php composer
 mediawiki_extension_bycomposer: []
-# - { name: 'mediawiki/bootstrap-components', version: '1.2.3' }
 
 # .. envvar:: mediawiki_customization
 #

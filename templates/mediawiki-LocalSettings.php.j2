@@ -65,8 +65,8 @@ $wgSMTP = [
     'IDHost' => '{{ target_host_domain }}',
     'localhost' => '{{ target_host_domain }}',
     'port' => 465,
-    'username' => 'thelifamy@gmail.com',
-    'password' => 'gfdmnynozafdcjvh',
+    'username' => '',
+    'password' => '',
     'auth' => true
 ];
 
@@ -202,10 +202,16 @@ $wgAllowExternalImages = true;
 
 ## Set $wgAllowImageTag to allow <img> tag to be used in wikitext
 #  Default value: false
-$wgAllowImageTag = true;
+#$wgAllowImageTag = true;
 
 ## Site language code, should be one of the list in ./languages/Names.php
 $wgLanguageCode = "en";
+
+## Determines how section IDs should be encoded
+#  html5 - modern HTML5 style encoding with minimal escaping. Allow to display Unicode characters
+#  legacy - old MediaWiki-style encoding, e.g. () turns into .28 & .29
+#  this need to be set for ScrollSpy function on TOC (table of content)
+$wgFragmentMode = [ 'html5' ];
 
 $wgSecretKey = "c130a01363104bbedff4122a21e1ef0fe1889ba72f40c31521e174d1155616f7";
 
@@ -341,9 +347,24 @@ $wgLocalisationUpdateDirectory = "$IP/cache";               // directory to stor
 $wgDefaultUserOptions['math'] = 'mathml';                       // Set MathML as default rendering option
 $wgMathFullRestbaseURL= 'https://en.wikipedia.org/api/rest_';   // use Mathoid as a service
 {% endif %}
+{% if item.name == "OpenIDConnect" %}
+#$wgOpenIDConnect_Config['https://{{mediawiki_server}}'] = [
+#    'clientID' => '...',
+#    'clientsecret' => '...',
+#    'name' => "theLiJIA",
+#    'icon' => '$wgLogo',
+#    'scope' => [ 'openid', 'profile', 'email' ]
+#];
+{% endif %}
 {% if item.name == "ParserFunctions" %}
 $wgPFEnableStringFunctions = true;              // activate the integrated string functionality
 $wgPFStringLengthLimit = 1000;                  // defines the maximum length of a string that string functions are allowed
+{% endif %}
+{% if item.name == "PluggableAuth" %}
+#$wgPluggableAuth_EnableAutoLogin = true;                 // should login occur automatically when a user visit the wiki
+#$wgPluggableAuth_EnableLocalLogin = true;                // should user also be presented with user/pwd fields on the login page to allow local password-based login to the wiki
+#$wgPluggableAuth_EnableLocalProperties = false;          // users can edit their email address and real name on the wiki if set to true
+#$wgPluggableAuth_ButtonLabelMessage = 'theLiJIA';        // custome the button label with a localizable message in the login page
 {% endif %}
 {% if item.name == "Popups" %}
 $wgPopupsHideOptInOnPreferencesPage = false;        // option to hidden on Preferences page
@@ -395,7 +416,6 @@ $wgParsoidSettings = [
     'rtTestMode' => false,
     'linting' => false,
 ];
-
 $wgDefaultUserOptions['visualeditor-enable'] = 1;       // enable by default for everybody
 $wgHiddenPrefs[] = 'visualeditor-enable';               // don't allow users to disable it
 $wgDefaultUserOptions['visualeditor-enable-experimental'] = 1;      // enable VisualEditor's experimental code features
@@ -436,6 +456,13 @@ $wgDefaultUserOptions['usebetatoolbar-cgd'] = 1;        // enables link and tabl
 $wgDefaultUserOptions['wikieditor-preview'] = 0;        // displays the Preview and Changes tabs
 $wgDefaultUserOptions['wikieditor-publish'] = 0;        // displays the Publish and Cancel buttons on the top right side
 {% endif %}
+{% if item.name == "WSOAuth" %}
+$wgOAuthAuthProvider = 'oAuth2';
+$wgOAuthUri = '';
+$wgOAuthClientId = '...';
+$wgOAuthClientSecret = '...';
+$wgOAuthRedirectUri = 'https://{{ mediawiki_server }}/index.php/Special:PluggableAuthLogin';
+{% endif %}
 
 {% endfor %}
 {% endif %}
@@ -457,8 +484,8 @@ $wgDplSettings['maxCategoryCount'] = 3;                 // maximum number of cat
 $wgDplSettings['maxResultCount'] = 500;                 // maximum number of results to return from a query.
 {% endif %}
 {% if item.name == "MW-OAuth2Client" %}
-$wgOAuth2Client['client']['id']     = '';                           // The client ID assigned to you by the provider
-$wgOAuth2Client['client']['secret'] = '';                           // The client secret assigned to you by the provider
+$wgOAuth2Client['client']['id']     = '...';                           // The client ID assigned to you by the provider
+$wgOAuth2Client['client']['secret'] = '...';                           // The client secret assigned to you by the provider
 $wgOAuth2Client['configuration']['authorize_endpoint']     = '{{ mediawiki_server }}/oauth/authorize/';     // Authorization URL
 $wgOAuth2Client['configuration']['access_token_endpoint']  = '{{ mediawiki_server }}/oauth/token/';         // Token URL
 $wgOAuth2Client['configuration']['api_endpoint']           = '{{ mediawiki_server }}/oauth/me/';             // URL to fetch user JSON
@@ -469,7 +496,7 @@ $wgOAuth2Client['configuration']['http_bearer_token'] = 'Bearer';               
 $wgOAuth2Client['configuration']['query_parameter_token'] = 'auth_token';                                   // query parameter to use
 $wgOAuth2Client['configuration']['scopes'] = 'basic';                                                       // Permissions
 $wgOAuth2Client['configuration']['service_name'] = 'mediawiki';                                             // the name of your service
-$wgOAuth2Client['configuration']['service_login_link_text'] = 'theLijia';                                   // the text of the login link
+$wgOAuth2Client['configuration']['service_login_link_text'] = 'theLiJIA';                                   // the text of the login link
 {% endif %}
 
 {% endfor %}

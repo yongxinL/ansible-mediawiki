@@ -15,6 +15,17 @@
         try_files   $uri    $uri/   /w/index.php?$query_string;
     }
 
+    # Handling for the article path
+    location @mediawiki {
+        # article path should always be passed to index.php
+        rewrite     ^/wiki/(.*)$    /w/index.php?title=$1&$args;
+    }
+
+    # Handling for the REST API
+    location /w/rest.php/ {
+        try_files   $uri    $uri/   /w/rest.php?$query_string;
+    }
+
     # rewrite rule for UrlShortener
     location ~ ^/r/(.*) {
         return 301  /w/index.php?title=Special:UrlRedirector/$1;
