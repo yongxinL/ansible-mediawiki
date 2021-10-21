@@ -101,21 +101,6 @@
             chdir={{ mediawiki_root }}"
         with_items: "{{ mediawiki_extension_bycomposer }}"
 
-- name: install PHP/Parsoid services from repository
-  block:
-      - file:
-            path: "{{ mediawiki_root }}/services"
-            state: directory
-            mode: 0644
-      - git:
-            repo: "https://gerrit.wikimedia.org/r/p/mediawiki/services/{{ item.name }}.git"
-            dest: "{{ mediawiki_root }}/services/{{ item.name }}"
-            version: "{{ item.version }}"
-            depth: 1
-            force: yes
-            update: yes
-        with_items: "{{ mediawiki_core_services }}"
-
 - name: install customization files
   block:
       - file:

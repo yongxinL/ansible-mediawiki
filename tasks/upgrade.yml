@@ -133,16 +133,6 @@
       chdir={{ mediawiki_root }}"
   with_items: "{{ mediawiki_extension_bycomposer }}"
 
-- name: update Parsoid Services from {{ install_role_name }} repository
-  git:
-      repo: "https://gerrit.wikimedia.org/r/p/mediawiki/services/{{ item.name }}.git"
-      dest: "{{ mediawiki_root }}/services/{{ item.name }}"
-      version: "{{ item.version }}"
-      depth: 1
-      force: yes
-      update: yes
-  with_items: "{{ mediawiki_core_services }}"
-
 - name: copy {{ install_role_name }} customization files
   copy:
       src: "{{ item.name }}"

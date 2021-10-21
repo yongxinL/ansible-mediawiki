@@ -23,6 +23,8 @@
 
  * *
  * @author George Li <yongxinL@outlook.com>
+ * @version 1.0.0
+ * @updated 2021.10.21
  */
 
 require_once __DIR__ . '/Maintenance.php';
@@ -333,11 +335,6 @@ class Uploader extends Maintenance
 							}
 						}
 					}
-					/** modified: comment out for further analyzing
-					 * if ( !$commentText ) {
-					 * 	  $commentText = $comment;
-					 * }
-					 */
 				}
 
 				// further analyzing and get comment from file
@@ -587,8 +584,7 @@ class Uploader extends Maintenance
 		// build category array
 		foreach ($body["query"]["allcategories"] as $k => $v) {
 			if (strpos($v["*"], '/') !== false) {
-				// $category[ str_replace( ' ', '_', explode( '/', $v["*"] )[0] ) ][] = str_replace( " ", "_", $v["*"] );
-				$category[explode('/', $v["*"])[0]][] = $v["*"];
+				$category[explode('/', $v["*"])[0]][] = explode( '/', preg_replace( '/[^A-Za-z0-9 \-]\s/', '', $v["*"] ));
 			}
 		}
 
@@ -627,82 +623,95 @@ class Uploader extends Maintenance
 	 */
 	private function getFileCommentFromFile($wiki_host, $file, $category)
 	{
-
 		$base = explode('-', UtfNormal\Validator::cleanUp(wfBaseName($file)));
-		$cat = false;
-		$subcat = false;
+		$positionStart = 0;
+		$wordExclude = array("and", "or");
+		$wordLetterMatch = 5;
+		$categoryLevelMatch = 3;
+		$categoryFound = [];
 		$comment = '';
-		$offset = 0;
-
-		// build category based on date
+		
+		// build category from timestamp
 		if (preg_match('/^[0-9]{8}$/', $base[0]) and date('Y', strtotime($base[0])) > 1970) {
 			$comment .= '[[Category:' . date('Y/Y0m', strtotime($base[0])) . ']]';
-		} elseif (preg_match('/^[0-9]$/', $base[0])) {
+			$positionStart++;
+		} elseif (preg_match('/^[0-9]*$/', $base[0])) {
 			$comment .= '[[Category:' . date('Y/Y0m', strtotime('now')) . ']]';
-			$offset++;
+			$positionStart++;
 		} else {
 			$comment .= '[[Category:' . date('Y/Y0m', strtotime('now')) . ']]';
 		}
 
-		// add category based on file
-		if (isset($base[1 - $offset])) {
-			foreach ($category as $key => $item) {
-				foreach (explode(' ', preg_replace('/[^A-Za-z0-9 \-]\s/', '', $key)) as $k => $v) {
-					if (preg_match('/' . substr($base[1 - $offset], 0, 5) . '/i', explode(' ', $v)[0]) || strtolower($base[1 - $offset]) == strtolower($v)) {
-						$cat = $key;
+		// build category from filename
+		if (isset( $base[$positionStart] )) {
+			foreach( $category as $key => $subcat ) {
+				// separate category into word and match.
+				foreach( explode( ' ', $key ) as $word ) {
+					if( in_array( $word, $wordExclude ) || in_array( $base[$positionStart], $wordExclude )){
+						continue;
+					} elseif ( preg_match( '/^' . substr( $base[$positionStart], 0, $wordLetterMatch) . '/i', $word )
+							|| strtolower( $base[$positionStart] ) == strtolower( $word ) ){
+						$categoryFound[0] = $key;
 						break;
 					}
 				}
-				if ($cat != false) {
-					break;
-				}
 			}
 		}
+		if ( isset( $categoryFound[0] ) && count($base) - $positionStart > 0 ) {
+			// shrink $category
+			$category = $category[$categoryFound[0]];
+			// initialize $categoryFound[1] for avoiding error on $categoryFound[$i-1]
+			$categoryFound[1] = '';
 
-		// add subcategory based on file
-		if (isset($base[2 - $offset])) {
-			if ($cat != false) {
-				foreach ($category[$cat] as $key => $item) {
-					foreach (explode(' ', preg_replace('/[^A-Za-z0-9 \-]\s/', '', substr(strrchr($item, '/'), 1))) as $k => $v) {
-						if (preg_match('/' . substr($base[2 - $offset], 0, 5) . '/i', explode(' ', $v)[0]) || strtolower($base[2 - $offset]) == strtolower($v)) {
-							$subcat = $item;
-							break;
+			foreach( $category as $subcat ) {
+				for( $i = 1; $i <= $categoryLevelMatch; $i++ ) {
+					// check if previous of $categoryFound and $subcat is match, also current $subcat is set
+					if ( isset( $subcat[$i] ) && ( $subcat[$i-1] == $categoryFound[$i-1] )) {
+						//separate subcategory into word and match
+						foreach( explode( ' ', $subcat[$i] ) as $word ) {
+							if( in_array( $word, $wordExclude ) || in_array( $base[$i + $positionStart], $wordExclude )){
+								continue;
+							} elseif ( preg_match( '/^' . substr( $base[$i + $positionStart], 0, $wordLetterMatch) . '/i', $word )) {
+								$categoryFound[$i] = $subcat[$i];
+								break;
+							}
 						}
-					}
-				}
-				if ($subcat != false) {
-					$comment .= '[[Category:' . str_replace(' ', '_', $subcat) . ']]';
-				} else {
-					$comment .= '[[Category:' . str_replace(' ', '_', $cat) . '/Reference]]';
-					$offset++;
+					} else { break;	}
 				}
 			}
+			if ( empty( $categoryFound[1]) ) unset( $categoryFound[1] );
+		}
+		if ( count($categoryFound) > 0 ) {
+			$positionStart = $positionStart + count($categoryFound);
+			$comment .= '[[Category:' . str_replace(' ', '_', implode( '/', $categoryFound )) . ']]';
 		}
 
 		/**
 		 * add page/subpage title based on file
 		 *
-		 * text in P[3] will be added to comment regardless of whether pagetitle exists.
-		 * text in P[4] will be added when title[3]/title[4] exists.
-		 * text in P[5] will be added when title[3]/title[4]/title[5]subpage exists.
+		 * text in P[$positionStart] will be added to comment regardless of whether pagetitle exists.
+		 * text in P[$positionStart + 1] will be added when title[0]/title[1] exists.
+		 * text in P[$positionStart + 2] will be added when title[0]/title[1]/title[2]subpage exists.
 		 * 
-		 * TODO: use opensearch for case insensitive?
 		 */
-		if (isset($base[3 - $offset])) {
+
+		if ( isset( $base[$positionStart] ) && !preg_match('/^\d/', $base[$positionStart] )) {
 			$comment .= '[[';
 
-			if (
-				isset($base[5 - $offset]) && $this->getSubpageFromSourceWiki($wiki_host, $this->reformat($base[3 - $offset])
-					. '/' . $this->reformat($base[4 - $offset]) . '/' . $this->reformat($base[5 - $offset]))
+			if ( isset( $base[$positionStart + 2] )
+				&& $this->getSubpageFromSourceWiki( $wiki_host, $this->reformat( $base[$positionStart] )
+				. '/' . $this->reformat( $base[$positionStart + 1] ) . '/' . $this->reformat( $base[$positionStart + 2] ))
 			) {
-				$comment .= $this->reformat($base[3 - $offset]) . '/' . $this->reformat($base[4 - $offset]) . '/' . $this->reformat($base[5 - $offset]);
-			} elseif (
-				isset($base[4 - $offset]) && $this->getSubpageFromSourceWiki($wiki_host, $this->reformat($base[3 - $offset])
-					. '/' . $this->reformat($base[4 - $offset]))
-			) {
-				$comment .= $this->reformat($base[3 - $offset]) . '/' . $this->reformat($base[4 - $offset]);
+				$comment .= $this->reformat( $base[$positionStart] ) 
+				. '/' . $this->reformat( $base[$positionStart + 1] )
+				. '/' . $this->reformat( $base[$positionStart + 2]);
+			} elseif (isset( $base[$positionStart + 1] )
+				&& $this->getSubpageFromSourceWiki($wiki_host, $this->reformat( $base[$positionStart] )
+				. '/' . $this->reformat( $base[$positionStart + 1] ))) {
+				$comment .= $this->reformat( $base[$positionStart + 1])
+				. '/' . $this->reformat( $base[$positionStart + 2] );
 			} else {
-				$comment .= $this->reformat($base[3 - $offset]);
+				$comment .= $this->reformat( $base[$positionStart] );
 			}
 
 			$comment .= ']]';

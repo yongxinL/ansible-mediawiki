@@ -1,7 +1,7 @@
 <?php
 # =============================================================================
 #
-# - This is part of Lifamily Library (Wiki) project 
+# - This is part of Lifamily Library (Wiki) project
 #
 # - Copyright (C) 2010-2021     George Li <yongxinl@outlook.com>
 #
@@ -38,11 +38,14 @@ $wgArticlePath = "/{{ mediaiwki_ArticlePath }}/$1";
 $wgUsePathInfo = true;
 
 ## The protocol and server name to use in fully-qualified URLs
-$wgServer = "http://{{ mediawiki_server }}";
+$wgServer = "https://{{ mediawiki_server }}";
 
 ## The relative URL path to the skins directory
 $wgStylePath = "$wgScriptPath/skins";
 $wgResourceBasePath = $wgScriptPath;
+
+## The relative URL path to the upload directory
+$wgUploadPath = "$wgScriptPath/{{ mediawiki_upload }}";
 
 ## The relative URL path to the logo.  Make sure you change this from the default,
 # or else you'll overwrite your logo when you upgrade!
@@ -139,7 +142,7 @@ $wgThumbLimits  = array(
    300  // thumb size 2
   );
 
-// By default display the midsize option
+# By default display the midsize option
 $wgDefaultUserOptions['thumbsize'] = 1; // thumb size 250
 
 ## Paging limit for categories, default is 200
@@ -207,12 +210,6 @@ $wgAllowExternalImages = true;
 ## Site language code, should be one of the list in ./languages/Names.php
 $wgLanguageCode = "en";
 
-## Determines how section IDs should be encoded
-#  html5 - modern HTML5 style encoding with minimal escaping. Allow to display Unicode characters
-#  legacy - old MediaWiki-style encoding, e.g. () turns into .28 & .29
-#  this need to be set for ScrollSpy function on TOC (table of content)
-$wgFragmentMode = [ 'html5' ];
-
 $wgSecretKey = "c130a01363104bbedff4122a21e1ef0fe1889ba72f40c31521e174d1155616f7";
 
 # Changing this will log out all existing sessions.
@@ -226,7 +223,7 @@ $wgUpgradeKey = "626ff68b75ed37e9";
 #  appropriate copyright notice / icon. GNU Free Documentation
 #  License and Creative Commons licenses are supported so far.
 $wgRightsPage = "{{ mediawiki_sitename }}"; # Set to the title of a wiki page that describes your license/copyright
-$wgRightsUrl = "www.{{ target_host_domain }}";
+$wgRightsUrl = "{{ target_host_domain }}";
 $wgRightsText = "{{ mediawiki_sitename }}";
 $wgRightsIcon = "$wgScriptPath/resources/assets/licenses/cc-by-nc-sa.png";
 
@@ -234,7 +231,13 @@ $wgRightsIcon = "$wgScriptPath/resources/assets/licenses/cc-by-nc-sa.png";
 $wgDiff3 = "/usr/bin/diff3";
 
 ## This location where uploaded files will be stored.
-$wgUploadDirectory = "{$IP}/images";
+$wgUploadDirectory = "{$IP}/{{ mediawiki_upload }}";
+
+## Determines how section IDs should be encoded
+#  html5 - modern HTML5 style encoding with minimal escaping. Allow to display Unicode characters
+#  legacy - old MediaWiki-style encoding, e.g. () turns into .28 & .29
+#  this need to be set for ScrollSpy function on TOC (table of content)
+$wgFragmentMode = [ 'html5' ];
 
 ##  The following skins were automatically enabled:
 {% if mediawiki_core_skins %}
@@ -327,15 +330,6 @@ $wgDefaultUserOptions["echo-subscriptions-web-commentstreams-notification-catego
 $wgNamespaceContentModels[NS_TALK] = 'flow-board';
 $wgNamespaceContentModels[NS_TEMPLATE_TALK] = 'flow-board';
 $wgNamespaceContentModels[NS_CATEGORY_TALK] = 'flow-board';
-#  please run maintenance/update.php after enable Flow extension above
-#  and then run below command to enable or disable Flow for a namespace.
-#  all the NS_* constants here: https://www.mediawiki.org/wiki/Manual:Namespace_constants
-#  required for Flow extension below REL 1.35
-/*
-    php maintenance/populateContentModel.php --wiki={{ mediawiki_sitename | replace(" ","") }} --ns=all --table=revision
-    php maintenance/populateContentModel.php --wiki={{ mediawiki_sitename | replace(" ","") }} --ns=all --table=archive
-    php maintenance/populateContentModel.php --wiki={{ mediawiki_sitename | replace(" ","") }} --ns=all --table=page
-*/
 {% endif %}
 {% if item.name == "Interwiki" %}
 $wgGroupPermissions['sysop']['interwiki'] = true;           // grant sysops permissions to edit interwiki data
@@ -367,7 +361,7 @@ $wgPFStringLengthLimit = 1000;                  // defines the maximum length of
 #$wgPluggableAuth_ButtonLabelMessage = 'theLiJIA';        // custome the button label with a localizable message in the login page
 {% endif %}
 {% if item.name == "Popups" %}
-$wgPopupsHideOptInOnPreferencesPage = false;        // option to hidden on Preferences page
+$wgPopupsHideOptInOnPreferencesPage = true;        // option to hidden on Preferences page
 $wgPopupsOptInDefaultState = '1';                   // page previews visibility
 $wgPopupsReferencePreviewsBetaFeature = false;      // enabled for all users by default
 {% endif %}
@@ -387,6 +381,14 @@ $wgBlacklistSettings = [
     ],
 ];
 {% endif %}
+{% if item.name == "TemplateData" %}
+$wgTemplateDataUseGUI = true;                       // experimental dialog interface to edit template JSON
+{% endif %}
+{% if item.name == "TextExtracts" %}
+$wgExtractsRemoveClasses = array(
+  'dl', 'div'                                       // tags will be excluded from extraction
+);
+{% endif %}
 {% if item.name == "TitleBlacklist" %}
 $wgTitleBlacklistSources = [
     [
@@ -398,14 +400,6 @@ $wgTitleBlacklistSources = [
          'src'  => 'https://meta.wikimedia.org/w/index.php?title=Title_blacklist&action=raw'
     ]
 ];
-{% endif %}
-{% if item.name == "TemplateData" %}
-$wgTemplateDataUseGUI = true;                       // experimental dialog interface to edit template JSON
-{% endif %}
-{% if item.name == "TextExtracts" %}
-$wgExtractsRemoveClasses = array(
-  'dl', 'div'                                       // tags will be excluded from extraction
-);
 {% endif %}
 {% if item.name == "VisualEditor" %}
 # Load Extension : RestAPI, available after REL1_35
@@ -422,25 +416,18 @@ $wgDefaultUserOptions['visualeditor-enable-experimental'] = 1;      // enable Vi
 $wgVisualEditorAvailableNamespaces = [
     NS_MAIN => true,
     NS_TALK => true,
-    2 => true,                                          // Enable on namespace NS_USER, NS_{{ mediawiki_sitename | replace(" ","") }}, NS_TEMPLATE, NS_HELP, NS_CATEGORY
-    4 => true,
-    10 => true,
-    12 => true,
-    14 => true,
+    2 => true,                                          // User - User pages
+    4 => false,                                         // Project - Information about the wiki
+    6 => false,                                         // File - Media description pages
+    8 => false,                                         // MediaWiki - Site interface customization
+    10 => false,                                        // Template - Template page
+    12 => true,                                         // Help - Help pages
+    14 => true,                                         // Category - Category description pages
     "_merge_strategy" => "array_plus"
 ];
 $wgVisualEditorSupportedSkins = [
   'vector'                                  // skins that supported VE
 ];
-# Linking to Parsoid/JS, for early version (before 1.35)
-#$wgVirtualRestConfig['modules']['parsoid'] = array(
-  # URL to the Parsoid instance
-  # 'url' => 'http://127.0.0.1:8142',
-  # Parsoid "domain", see below (optional)
-  # 'domain' => '{{ mediawiki_sitename | replace(" ","") }}',
-  # Forward users' cookie: headers to Parsoid.
-  # 'forwardCookies' => 'true'
-#);
 
 # Linking to Parsoid/PHP (available in REL1_35)
 $wgVirtualRestConfig['modules']['parsoid'] = [
@@ -448,7 +435,6 @@ $wgVirtualRestConfig['modules']['parsoid'] = [
     'url' => 'http://localhost' . $wgScriptPath . '/rest.php',
     'domain' => $wgServer,
 ];
-
 $wgSessionsInObjectCache = true;    // This feature requires a non-locking session store. The default session store will not work and will cause deadlocks
 {% endif %}
 {% if item.name == "WikiEditor" %}
@@ -548,13 +534,13 @@ $wgGroupPermissions['sysop']['suppressionlog'] = true;    // allow Sysop to hide
 #$wgCirrusSearchClusters = array( 'default' => array( array( 'port' => '9920','host' => 'localhost','transport' => 'Http' ),));
 
 ## 5. Now run this script to generate your elasticsearch index:
-##   php $MW_INSTALL_PATH/extensions/CirrusSearch/maintenance/updateSearchIndexConfig.php
+##   php $MW_INSTALL_PATH/extensions/CirrusSearch/maintenance/UpdateSearchIndexConfig.php
 #
 ## 6. Now commit $wgDisableSearchUpdate = true above. Updates should start heading to Elasticsearch.
 #
 ## 7. Next bootstrap the search index by running:
-##   php $MW_INSTALL_PATH/extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipLinks --indexOnSkip
-##   php $MW_INSTALL_PATH/extensions/CirrusSearch/maintenance/forceSearchIndex.php --skipParse
+##   php $MW_INSTALL_PATH/extensions/CirrusSearch/maintenance/ForceSearchIndex.php --skipLinks --indexOnSkip
+##   php $MW_INSTALL_PATH/extensions/CirrusSearch/maintenance/ForceSearchIndex.php --skipParse
 #
 ## 8. Once that is complete uncommit this to funnel queries to ElasticSearch:
 #$wgSearchType = 'CirrusSearch';
